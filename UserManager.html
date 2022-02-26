@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: Fridge</title>
+    <title>JSDoc: Class: UserManager</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: Fridge</h1>
+    <h1 class="page-title">Class: UserManager</h1>
 
     
 
@@ -28,23 +28,21 @@
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>Fridge<span class="signature">()</span><span class="type-signature"></span></h2>
+        <h2><span class="attribs"><span class="type-signature"></span></span>UserManager<span class="signature">(express, options)</span><span class="type-signature"></span></h2>
         
-            <div class="class-description"><p>Simple selecting serialisation/deserialisation of a JS object
-graph to stand-alone JSON. Does not handle function
-references. Full restoration of objects requires class
-prototypes to be passed in to thaw().
-The object property prefix '<em>IB</em>' is reserved for use by this
-module, and note also that fields who's names start with _ will
-not be serialised.</p>
-<p>Note that the objects being frozen are 'interfered with' by the
-addition of an _IB_ID field that indicates their 'frozen ID'.
-This is a (clumsy) solution to the lack of ES7 value objects in ES6.
-The frozen version (JSONified) version of objects are decorated
-with fields as follows:
-_IB_CN: constructor name
-_IB_REF: the _IB_ID of another object being referenced
-Date objects are serialised to string.</p></div>
+            <div class="class-description"><p>Manage user login, registration, password reset using Express
+and Passport. User object will be kept in req, and contains
+{ name:, email:, key:, pass: }</p>
+<p>This makes no pretence of being secure, it is simply a means to manage
+simple player login to a game.
+The routes added are:
+POST /register (name, email, pass)
+POST /login (name, pass)
+POST /logout
+POST /reset-password
+POST /change-password (pass)
+GET /reset-password/:token
+GET /session get the redacted user object for the logged-in player</p></div>
         
     
 </header>
@@ -59,19 +57,193 @@ Date objects are serialised to string.</p></div>
     
 
     
-    <h4 class="name" id="Fridge"><span class="type-signature"></span>new Fridge<span class="signature">()</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="UserManager"><span class="type-signature"></span>new UserManager<span class="signature">(express, options)</span><span class="type-signature"></span></h4>
     
 
     
 
 
 
+<div class="description">
+    <p>Construct on an express instance, adding relevant routes.</p>
+</div>
 
 
 
 
 
 
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>express</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Express</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Express object</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>options</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>configuration options</p>
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>sessionSecret</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>secret to use with express
+sessions</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>db_file</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>path to json file that stores
+passwords</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>mail</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>mail configuration for use with
+nodemailer</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
+        </tr>
+
+    
+    </tbody>
+</table>
 
 
 
@@ -107,7 +279,7 @@ Date objects are serialised to string.</p></div>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Fridge.js.html">game/Fridge.js</a>, <a href="game_Fridge.js.html#line25">line 25</a>
+        <a href="server_UserManager.js.html">server/UserManager.js</a>, <a href="server_UserManager.js.html#line50">line 50</a>
     </li></ul></dd>
     
 
@@ -154,334 +326,6 @@ Date objects are serialised to string.</p></div>
 
     
 
-    
-        <h3 class="subsection-title">Methods</h3>
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id=".freeze"><span class="type-signature">(static) </span>freeze<span class="signature">(object)</span><span class="type-signature"> &rarr; {object}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    <p>Convert an object graph to stand-alone JSON.</p>
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>object</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>object to freeze</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Fridge.js.html">game/Fridge.js</a>, <a href="game_Fridge.js.html#line32">line 32</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    <p>the frozen version of the object</p>
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">object</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id=".thaw"><span class="type-signature">(static) </span>thaw<span class="signature">(frozen, classes)</span><span class="type-signature"></span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    <p>Expand a frozen structure. During freezing, the
-constructor name for each frozen object is recorded. During
-thawing, that constructor name has to be mapped to a
-prototype. If a useable constructor is not found, a
-warning will be printed to the console.</p>
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>frozen</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>object to thaw</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>classes</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Array.&lt;object></span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>optional array of classes for
-objects expected within frozen data.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Fridge.js.html">game/Fridge.js</a>, <a href="game_Fridge.js.html#line109">line 109</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
     
 
     

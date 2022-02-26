@@ -30,7 +30,7 @@
     
         <h2><span class="attribs"><span class="type-signature"></span></span>Server<span class="signature">(config)</span><span class="type-signature"></span></h2>
         
-            <div class="class-description"><p>Main program for Crossword Game server.</p></div>
+            <div class="class-description"><p>Web server for crossword game.</p></div>
         
     
 </header>
@@ -142,7 +142,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line29">line 29</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line25">line 25</a>
     </li></ul></dd>
     
 
@@ -323,7 +323,7 @@ the game is ready to accept a Turn from the given player.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line280">line 280</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line307">line 307</a>
     </li></ul></dd>
     
 
@@ -359,7 +359,7 @@ the game is ready to accept a Turn from the given player.</p>
     
 
     
-    <h4 class="name" id="handle_anotherGame"><span class="type-signature"></span>handle_anotherGame<span class="signature">()</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="handle_addRobot"><span class="type-signature"></span>handle_addRobot<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
     
 
     
@@ -367,8 +367,8 @@ the game is ready to accept a Turn from the given player.</p>
 
 
 <div class="description">
-    <p>Handler for POST /anotherGame/:gameKey
-Create another game with the same players.</p>
+    <p>Handle /addRobot/:gameKey to add a robot to the game
+It's an error to add a robot to a game that already has a robot.</p>
 </div>
 
 
@@ -412,7 +412,7 @@ Create another game with the same players.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line560">line 560</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line557">line 557</a>
     </li></ul></dd>
     
 
@@ -437,6 +437,130 @@ Create another game with the same players.</p>
 
 
 
+<h5>Returns:</h5>
+
+        
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="handle_anotherGame"><span class="type-signature"></span>handle_anotherGame<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Create another game with the same players.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line645">line 645</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise</span>
+
+
+    </dd>
+</dl>
+
+    
 
 
 
@@ -456,7 +580,7 @@ Create another game with the same players.</p>
 
 
 <div class="description">
-    <p>Handler for GET /bestPlay/:gameKey/:playerKey
+    <p>Handle /bestPlay/:gameKey/:playerKey
 Find the best play for the player, given the current board
 state. Note that it may not be their turn, that's OK, this is debug</p>
 </div>
@@ -502,7 +626,7 @@ state. Note that it may not be their turn, that's OK, this is debug</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line532">line 532</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line615">line 615</a>
     </li></ul></dd>
     
 
@@ -564,8 +688,7 @@ state. Note that it may not be their turn, that's OK, this is debug</p>
 
 
 <div class="description">
-    <p>Handler for POST /command/:gameKey/:command
-Result is always a Turn object, though the actual content
+    <p>Result is always a Turn object, though the actual content
 varies according to the command sent.</p>
 </div>
 
@@ -610,7 +733,7 @@ varies according to the command sent.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line572">line 572</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line656">line 656</a>
     </li></ul></dd>
     
 
@@ -638,10 +761,6 @@ varies according to the command sent.</p>
 <h5>Returns:</h5>
 
         
-<div class="param-desc">
-    <p>Promise that resolves to undefined.</p>
-</div>
-
 
 
 <dl>
@@ -668,7 +787,7 @@ varies according to the command sent.</p>
     
 
     
-    <h4 class="name" id="handle_deleteGame"><span class="type-signature"></span>handle_deleteGame<span class="signature">()</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="handle_createGame"><span class="type-signature"></span>handle_createGame<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
     
 
     
@@ -676,8 +795,7 @@ varies according to the command sent.</p>
 
 
 <div class="description">
-    <p>Handler for POST /deleteGame/:gameKey
-Delete the game.</p>
+    <p>Handler for POST /createGame</p>
 </div>
 
 
@@ -721,7 +839,7 @@ Delete the game.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line548">line 548</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line454">line 454</a>
     </li></ul></dd>
     
 
@@ -746,6 +864,131 @@ Delete the game.</p>
 
 
 
+<h5>Returns:</h5>
+
+        
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="handle_deleteGame"><span class="type-signature"></span>handle_deleteGame<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Handle /deleteGame/:gameKey
+Delete a game.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line632">line 632</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise</span>
+
+
+    </dd>
+</dl>
+
+    
 
 
 
@@ -810,7 +1053,7 @@ return {Promise} Promise to index available dictionaries</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line392">line 392</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line423">line 423</a>
     </li></ul></dd>
     
 
@@ -900,7 +1143,7 @@ return {Promise} Promise to index available editions</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line379">line 379</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line410">line 410</a>
     </li></ul></dd>
     
 
@@ -936,7 +1179,7 @@ return {Promise} Promise to index available editions</p>
     
 
     
-    <h4 class="name" id="handle_enterGame"><span class="type-signature"></span>handle_enterGame<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+    <h4 class="name" id="handle_game"><span class="type-signature"></span>handle_game<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
     
 
     
@@ -944,10 +1187,7 @@ return {Promise} Promise to index available editions</p>
 
 
 <div class="description">
-    <p>Handler for /game/:gameKey/:playerKey, player joining a game.
-Sets a cookie in the response with the player key so future
-requests can be handled correctly.
-TODO: re-route to /join/:gameKey/:playerKey</p>
+    <p>Handle /game/:gameKey request for a dump of the game information.</p>
 </div>
 
 
@@ -991,7 +1231,7 @@ TODO: re-route to /join/:gameKey/:playerKey</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line490">line 490</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line602">line 602</a>
     </li></ul></dd>
     
 
@@ -1045,100 +1285,6 @@ TODO: re-route to /join/:gameKey/:playerKey</p>
     
 
     
-    <h4 class="name" id="handle_gameGET"><span class="type-signature"></span>handle_gameGET<span class="signature">()</span><span class="type-signature"></span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    <p>Handler for GET /game/:gameKey
-If the accept: in the request is asking for 'application/json'
-then respond with JSON with the current game state, if it's
-asking for HTML respond with the HTML page for the game.
-TODO: split these into separate routes /gameJSON/:gameKey
-and /gameHTML/:gameKey, or simply route the HTML request to
-the static HTML</p>
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line515">line 515</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-            
-
-    
-
-    
     <h4 class="name" id="handle_games"><span class="type-signature"></span>handle_games<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
     
 
@@ -1147,8 +1293,7 @@ the static HTML</p>
 
 
 <div class="description">
-    <p>Handler for GET /games
-Sends a catalogue of active games (optionally with completed games)
+    <p>Sends a catalogue of active games (optionally with completed games)
 pass ?active to get only active games. Note: does NOT send game
 onjects, rather a simple catalogue of Objects.</p>
 </div>
@@ -1194,7 +1339,7 @@ onjects, rather a simple catalogue of Objects.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line308">line 308</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line334">line 334</a>
     </li></ul></dd>
     
 
@@ -1306,7 +1451,219 @@ unique players.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line330">line 330</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line356">line 356</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="handle_join"><span class="type-signature"></span>handle_join<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Handle /join/:gameKey player joining a game.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line523">line 523</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="handle_leave"><span class="type-signature"></span>handle_leave<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Handle /leave/:gameKey player leaving a game.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line580">line 580</a>
     </li></ul></dd>
     
 
@@ -1414,7 +1771,7 @@ presentation language for the UI.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line365">line 365</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line396">line 396</a>
     </li></ul></dd>
     
 
@@ -1472,7 +1829,7 @@ presentation language for the UI.</p>
     
 
     
-    <h4 class="name" id="handle_newGame"><span class="type-signature"></span>handle_newGame<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+    <h4 class="name" id="handle_sendReminder"><span class="type-signature"></span>handle_sendReminder<span class="signature">()</span><span class="type-signature"></span></h4>
     
 
     
@@ -1480,7 +1837,8 @@ presentation language for the UI.</p>
 
 
 <div class="description">
-    <p>Handler for POST /newGame</p>
+    <p>Handler for POST /sendReminder
+Email reminders to next human player in (each) game</p>
 </div>
 
 
@@ -1524,7 +1882,95 @@ presentation language for the UI.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line420">line 420</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line434">line 434</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="handle_startGame"><span class="type-signature"></span>handle_startGame<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Handle /startGame/:gameKey</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line495">line 495</a>
     </li></ul></dd>
     
 
@@ -1578,96 +2024,7 @@ presentation language for the UI.</p>
     
 
     
-    <h4 class="name" id="handle_sendTurnReminders"><span class="type-signature"></span>handle_sendTurnReminders<span class="signature">()</span><span class="type-signature"></span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    <p>Handler for POST /sendTurnReminders
-Email reminders to next human player in each game</p>
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line403">line 403</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="loadGame"><span class="type-signature">(async) </span>loadGame<span class="signature">(key)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+    <h4 class="name" id="loadGame"><span class="type-signature"></span>loadGame<span class="signature">(key)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
     
 
     
@@ -1768,7 +2125,7 @@ Email reminders to next human player in each game</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line233">line 233</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line261">line 261</a>
     </li></ul></dd>
     
 
@@ -1878,7 +2235,7 @@ Email reminders to next human player in each game</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line296">line 296</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line323">line 323</a>
     </li></ul></dd>
     
 
@@ -1966,7 +2323,7 @@ Email reminders to next human player in each game</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line270">line 270</a>
+        <a href="server_Server.js.html">server/Server.js</a>, <a href="server_Server.js.html#line297">line 297</a>
     </li></ul></dd>
     
 
@@ -2012,13 +2369,13 @@ Email reminders to next human player in each game</p>
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-dawg_compressor.html">dawg/compressor</a></li><li><a href="module-dawg_explore.html">dawg/explore</a></li><li><a href="module-design_valett.html">design/valett</a></li><li><a href="module-game_findBestPlay.html">game/findBestPlay</a></li><li><a href="module-i18n_checkTranslation.html">i18n/checkTranslation</a></li></ul><h3>Classes</h3><ul><li><a href="Board.html">Board</a></li><li><a href="BrowserPlatform.html">BrowserPlatform</a></li><li><a href="Database.html">Database</a></li><li><a href="Dictionary.html">Dictionary</a></li><li><a href="Edition.html">Edition</a></li><li><a href="FileDatabase.html">FileDatabase</a></li><li><a href="Fridge.html">Fridge</a></li><li><a href="Game.html">Game</a></li><li><a href="I18N.html">I18N</a></li><li><a href="LetterBag.html">LetterBag</a></li><li><a href="Move.html">Move</a></li><li><a href="Platform.html">Platform</a></li><li><a href="Player.html">Player</a></li><li><a href="Rack.html">Rack</a></li><li><a href="Server.html">Server</a></li><li><a href="ServerPlatform.html">ServerPlatform</a></li><li><a href="Square.html">Square</a></li><li><a href="Surface.html">Surface</a></li><li><a href="Tile.html">Tile</a></li><li><a href="Trie.html">Trie</a></li><li><a href="TrieNode.html">TrieNode</a></li><li><a href="Turn.html">Turn</a></li><li><a href="Ui.html">Ui</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-dawg_compressor.html">dawg/compressor</a></li><li><a href="module-dawg_explore.html">dawg/explore</a></li><li><a href="module-design_valett.html">design/valett</a></li><li><a href="module-game_findBestPlay.html">game/findBestPlay</a></li><li><a href="module-i18n_checkTranslation.html">i18n/checkTranslation</a></li></ul><h3>Classes</h3><ul><li><a href="Board.html">Board</a></li><li><a href="BrowserPlatform.html">BrowserPlatform</a></li><li><a href="Database.html">Database</a></li><li><a href="Dialog.html">Dialog</a></li><li><a href="Dictionary.html">Dictionary</a></li><li><a href="Edition.html">Edition</a></li><li><a href="FileDatabase.html">FileDatabase</a></li><li><a href="Fridge.html">Fridge</a></li><li><a href="Game.html">Game</a></li><li><a href="I18N.html">I18N</a></li><li><a href="LetterBag.html">LetterBag</a></li><li><a href="Move.html">Move</a></li><li><a href="Platform.html">Platform</a></li><li><a href="Player.html">Player</a></li><li><a href="Rack.html">Rack</a></li><li><a href="Server.html">Server</a></li><li><a href="ServerPlatform.html">ServerPlatform</a></li><li><a href="Square.html">Square</a></li><li><a href="Surface.html">Surface</a></li><li><a href="Tile.html">Tile</a></li><li><a href="Trie.html">Trie</a></li><li><a href="TrieNode.html">TrieNode</a></li><li><a href="Turn.html">Turn</a></li><li><a href="Ui.html">Ui</a></li><li><a href="UserManager.html">UserManager</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.4</a> on Mon Nov 01 2021 11:53:01 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sat Feb 26 2022 19:28:44 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

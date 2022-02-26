@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: Database</title>
+    <title>JSDoc: Class: Dialog</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: Database</h1>
+    <h1 class="page-title">Class: Dialog</h1>
 
     
 
@@ -28,12 +28,10 @@
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature">(abstract) </span></span>Database<span class="signature">(id, type)</span><span class="type-signature"></span></h2>
+        <h2><span class="attribs"><span class="type-signature"></span></span>Dialog<span class="signature">(dlg, options)</span><span class="type-signature"></span></h2>
         
-            <div class="class-description"><p>A pure abstraction isolating platform details from the rest of
-the code. The main purpose is to allow common code to run on
-both browser and server, but it also provides an abstraction of
-the server-side database (unused on the browser).</p></div>
+            <div class="class-description"><p>Base class of modal dialogs. These are dialogs that support
+a set of fields and a submit button.</p></div>
         
     
 </header>
@@ -48,12 +46,17 @@ the server-side database (unused on the browser).</p></div>
     
 
     
-    <h4 class="name" id="Database"><span class="type-signature">(abstract) </span>new Database<span class="signature">(id, type)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="Dialog"><span class="type-signature"></span>new Dialog<span class="signature">(dlg, options)</span><span class="type-signature"></span></h4>
     
 
     
 
 
+
+<div class="description">
+    <p>Construct the named dialog, demand-loading the HTML as
+necessary.</p>
+</div>
 
 
 
@@ -88,7 +91,7 @@ the server-side database (unused on the browser).</p></div>
 
         <tr>
             
-                <td class="name"><code>id</code></td>
+                <td class="name"><code>dlg</code></td>
             
 
             <td class="type">
@@ -104,21 +107,20 @@ the server-side database (unused on the browser).</p></div>
 
             
 
-            <td class="description last"><p>will be used as the name of a directory
-under the requirejs root</p></td>
+            <td class="description last"><p>the dialog name</p></td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>type</code></td>
+                <td class="name"><code>options</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">string</span>
+<span class="param-type">object</span>
 
 
             
@@ -128,8 +130,80 @@ under the requirejs root</p></td>
 
             
 
-            <td class="description last"><p>identifier used to distinguish keys
-relevant to this DB from other data that may be co-located</p></td>
+            <td class="description last"><p>options</p>
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>done</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>submitted function, passed result
+of action AJAX call</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>error</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>error function, passed jqXHR</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
         </tr>
 
     
@@ -170,7 +244,7 @@ relevant to this DB from other data that may be co-located</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Platform.js.html">game/Platform.js</a>, <a href="game_Platform.js.html#line13">line 13</a>
+        <a href="browser_Dialog.js.html">browser/Dialog.js</a>, <a href="browser_Dialog.js.html#line10">line 10</a>
     </li></ul></dd>
     
 
@@ -226,7 +300,7 @@ relevant to this DB from other data that may be co-located</p></td>
     
 
     
-    <h4 class="name" id="get"><span class="type-signature">(abstract) </span>get<span class="signature">(key, classes)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+    <h4 class="name" id=".open"><span class="type-signature">(static) </span>open<span class="signature">(dlg, options)</span><span class="type-signature"></span></h4>
     
 
     
@@ -234,7 +308,8 @@ relevant to this DB from other data that may be co-located</p></td>
 
 
 <div class="description">
-    <p>Promise to get a key value</p>
+    <p>Open the named dialog, demand-loading the JS and HTML as
+needed.</p>
 </div>
 
 
@@ -270,7 +345,7 @@ relevant to this DB from other data that may be co-located</p></td>
 
         <tr>
             
-                <td class="name"><code>key</code></td>
+                <td class="name"><code>dlg</code></td>
             
 
             <td class="type">
@@ -286,465 +361,14 @@ relevant to this DB from other data that may be co-located</p></td>
 
             
 
-            <td class="description last"><p>the entry key</p></td>
+            <td class="description last"><p>the dialog name</p></td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>classes</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Array.&lt;Object></span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>list of classes passed to Fridge.thaw</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Platform.js.html">game/Platform.js</a>, <a href="game_Platform.js.html#line46">line 46</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    <p>resolves to the key value</p>
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="keys"><span class="type-signature">(abstract) </span>keys<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    <p>Promise to get a list of keys in the DB</p>
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Platform.js.html">game/Platform.js</a>, <a href="game_Platform.js.html#line28">line 28</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    <p>resolves to a list of key names</p>
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="rm"><span class="type-signature">(abstract) </span>rm<span class="signature">(key)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    <p>Remove a key and all associated data</p>
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>key</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>the entry key</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Platform.js.html">game/Platform.js</a>, <a href="game_Platform.js.html#line54">line 54</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    <p>resolves to undefined</p>
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="set"><span class="type-signature">(abstract) </span>set<span class="signature">(key, data)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    <p>Promise to set a key value</p>
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>key</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>the entry key</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>data</code></td>
+                <td class="name"><code>options</code></td>
             
 
             <td class="type">
@@ -760,7 +384,80 @@ relevant to this DB from other data that may be co-located</p></td>
 
             
 
-            <td class="description last"><p>the data to store</p></td>
+            <td class="description last"><p>options</p>
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>done</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>submitted function, passed result
+of action AJAX call</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>error</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>error function, passed jqXHR</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
         </tr>
 
     
@@ -801,7 +498,7 @@ relevant to this DB from other data that may be co-located</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Platform.js.html">game/Platform.js</a>, <a href="game_Platform.js.html#line37">line 37</a>
+        <a href="browser_Dialog.js.html">browser/Dialog.js</a>, <a href="browser_Dialog.js.html#line193">line 193</a>
     </li></ul></dd>
     
 
@@ -826,28 +523,360 @@ relevant to this DB from other data that may be co-located</p></td>
 
 
 
-<h5>Returns:</h5>
+
+
+
+
 
         
-<div class="param-desc">
-    <p>resolves to undefined</p>
+            
+
+    
+
+    
+    <h4 class="name" id="canSubmit"><span class="type-signature"></span>canSubmit<span class="signature">()</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Validate fields to determine if submit can be enabled.
+Override in subclasses.</p>
 </div>
 
 
 
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise</span>
 
 
-    </dd>
-</dl>
+
+
+
+
+
+
+
+
+<dl class="details">
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="browser_Dialog.js.html">browser/Dialog.js</a>, <a href="browser_Dialog.js.html#line146">line 146</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="createDialog"><span class="type-signature"></span>createDialog<span class="signature">()</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Handle dialog creation once the HTML has been loaded</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="browser_Dialog.js.html">browser/Dialog.js</a>, <a href="browser_Dialog.js.html#line51">line 51</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="getAction"><span class="type-signature"></span>getAction<span class="signature">()</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Return the AJAX action to be performed.
+Override in subclasses.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="browser_Dialog.js.html">browser/Dialog.js</a>, <a href="browser_Dialog.js.html#line138">line 138</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="validate"><span class="type-signature">(protected) </span>validate<span class="signature">()</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    <p>Enable submit if field values allow it</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="browser_Dialog.js.html">browser/Dialog.js</a>, <a href="browser_Dialog.js.html#line154">line 154</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

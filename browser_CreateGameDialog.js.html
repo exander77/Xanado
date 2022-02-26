@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Source: browser/BrowserPlatform.js</title>
+    <title>JSDoc: Source: browser/CreateGameDialog.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Source: browser/BrowserPlatform.js</h1>
+    <h1 class="page-title">Source: browser/CreateGameDialog.js</h1>
 
     
 
@@ -31,39 +31,58 @@
 /* eslint-env browser, jquery */
 
 /**
- * Browser implementation of game/Platform. See js/game/Platform.js
- * for the abstract base class.  Note there is no Platform.Database
- * implementation for the browser.
+ * Dialog for game creation. Demand loads the HTML.
  */
-define('platform', [ "game/Platform" ], (Platform) => {
+define("browser/CreateGameDialog", ["browser/Dialog"], (Dialog) => {
 
-	/**
-	 * Implementation of game/Platform
-	 * @implements Platform
-	 */
-	class BrowserPlatform extends Platform {
-		/** See {@link Platform#trigger} for documentation */
-		static trigger(e, args) {
-			// Pass events straight to the document
-			return $(document).trigger(e, args);
+	class CreateGameDialog extends Dialog {
+		
+		/**
+		 * @override
+		 */
+		canSubmit() {
+			console.log(`Validate edition ${this.$dlg.find('#edition').val()} dictionary ${this.$dlg.find('#dictionary').val()}`);
+
+			return (this.$dlg.find('#edition').val() !== 'none');
 		}
 
-		/** See {@link Platform#getResource} for documentation */
-		static getResource(path) {
-			return $.get(path);
+		constructor(options) {
+			super("CreateGameDialog", $.extend({
+				title: $.i18n("Create game")
+			}, options));
+
+			let promise;
+			$.get("/defaults")
+			.then(defaults => Promise.all([
+				$.get("/editions")
+				.then(editions => {
+					const $eds = this.$dlg.find('#edition');
+					editions.forEach(e => $eds.append(`&lt;option>${e}&lt;/option>`));
+					if (defaults.edition)
+						$eds.val(defaults.edition);
+					$eds.selectmenu();
+					$eds.on('selectmenuchange', () => this.validate());
+					this.validate();
+				}),
+				$.get("/dictionaries")
+				.then(dictionaries => {
+					const $dics = this.$dlg.find('#dictionary');
+					dictionaries.forEach(d => $dics.append(`&lt;option>${d}&lt;/option>`));
+					if (defaults.dictionary)
+						$dics.val(defaults.dictionary);
+					$dics.selectmenu();
+					$dics.on('selectmenuchange', () => this.validate());
+					this.validate();
+				})
+			]));
 		}
 
-		static findBestPlay() {
-			// NOP, not available in browser
-		}
-
-		/** See {@link Platform#i18n} for documentation */
-		static i18n() {
-			return $.i18n.apply(null, arguments);
+		getAction() {
+			return "createGame";
 		}
 	}
 
-	return BrowserPlatform;
+	return CreateGameDialog;
 });
 </code></pre>
         </article>
