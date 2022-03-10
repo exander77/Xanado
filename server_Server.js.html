@@ -82,13 +82,7 @@ define('server/Server', [
 			// based on the file mime type (extension) but Express doesn't
 			// always get it right.....
 			console.log(`static files from ${requirejs.toUrl('')}`);
-			express.use(Express.static(
-				requirejs.toUrl(''),
-				{
-					setHeaders: (res, path, stat) => {
-						console.log(`Sending ${path}`);
-					}
-				}));
+			express.use(Express.static(requirejs.toUrl('')));
 
 			express.use((req, res, next) => {
 				console.log(req.method, req.url);
@@ -187,7 +181,7 @@ define('server/Server', [
 					   (req, res) => this.handle_leave(req, res));
 
 			// Handler for adding a robot to a game
-			cmdRouter.post('/addRobot/:gameKey',
+			cmdRouter.post('/addRobot',
 					   (req, res, next) =>
 					   this.userManager.checkLoggedIn(req, res, next),
 					   (req, res) => this.handle_addRobot(req, res));
@@ -333,7 +327,7 @@ define('server/Server', [
 			}
 
 			// determine if it is this player's turn
-			if (player.index !== game.whosTurn) {
+			if (player.key !== game.whosTurnKey) {
 				console.log(`not ${player.name}'s turn`);
 				throw new Error(/*i18n*/'Not your turn');
 			}
@@ -363,8 +357,8 @@ define('server/Server', [
 				games
 				.filter(game => (all || !game.hasEnded()))
 				.map(game => game.catalogue(this.userManager))))
-			.then(gs => gs.sort((a, b) => a.timestamp > b.timestamp ? 1
-								: a.timestamp &lt; b.timestamp ? -1 : 0))
+			.then(gs => gs.sort((a, b) => a.lastActivity &lt; b.lastActivity ? 1
+								: a.lastActivity > b.lastActivity ? -1 : 0))
 			.then(data => res.status(200).send(data))
 			.catch(e => this.trap(e, res));
 		}
@@ -377,35 +371,41 @@ define('server/Server', [
 		 */
 		handle_history(req, res) {
 			const server = this;
-			const scores = {};
-			const wins = {};
-			const names = {};
 
 			return this.db.keys()
 			.then(keys => keys.map(key => this.loadGame(key)))
 			.then(promises => Promise.all(promises))
-			.then(games => games
-				  .filter(game => game.hasEnded())
-				  .map(game => {
-					  const winScore = game.winningScore();
-					  game.players.map(
-						  player => {
-							  names[player.key] = player.name;
-							  if (player.score === winScore) {
-								  if (typeof wins[player.key] === 'undefined')
-									  wins[player.key] = 1;
-								  else
-									  wins[player.key]++;
-							  }
-							  const s = scores[player.key] || 0;
-							  scores[player.key] = s + player.score;
-						  });
-				  }))
-			.then(() => res.status(200).send({
-				names: names,
-				scores: scores,
-				wins: wins
-			}))
+			.then(games => {
+				const results = {};
+				games
+				.filter(game => game.hasEnded())
+				.map(game => {
+					const winScore = game.winningScore();
+					game.players.map(
+						player => {
+							let result = results[player.key];
+							if (!result) {
+								results[player.key] =
+								result = {
+									key: player.key,
+									name: player.name,
+									score: 0,
+									wins: 0
+								};
+							}
+							if (player.score === winScore)
+								result.wins++;
+							result.score += player.score;
+						});
+				});
+				const list = [];
+				for (let name in results)
+					list.push(results[name]);
+				return list;
+			})
+			.then(list => list.sort((a, b) => a.score &lt; b.score ? 1
+									: (a.score > b.score ? -1 : 0)))
+			.then(list => res.status(200).send(list))
 			.catch(e => this.trap(e, res));
 		}
 
@@ -524,7 +524,8 @@ define('server/Server', [
 					return res.status(500).send(err);
 				
 				// Pick a random tile from the bag
-				game.whosTurn = Math.floor(Math.random() * game.players.length);
+				game.whosTurnKey = game.players[
+					Math.floor(Math.random() * game.players.length)].key;
 			
 				game.emailInvitations(
 					`${req.protocol}://${req.get('Host')}`,
@@ -577,15 +578,19 @@ define('server/Server', [
 		 * @return {Promise}
 		 */
 		handle_addRobot(req, res) {
-			const gameKey = req.params.gameKey;
+			const gameKey = req.body.gameKey;
+			const dic = req.body.dictionary;
+			console.log("Add robot",req.body);
 			return this.loadGame(gameKey)
 			.then(game => {
 				if (game.hasRobot())
 					return res.status(500).send("Game already has a robot");
-				console.log(`Robot joining ${gameKey}`);
+				console.log(`Robot joining ${gameKey} with ${dic}`);
 				// Robot always has the same player key
 				const robot = new Player(
 					'Robot', UserManager.ROBOT_KEY, true);
+				if (dic &amp;&amp; dic !== 'none')
+					robot.dictionary = dic;
 				game.addPlayer(robot);
 				return game.save()
 				// Game may now be ready to start
@@ -641,7 +646,7 @@ define('server/Server', [
 			return this.loadGame(gameKey)
 			.then(game => {
 				const player = game.getPlayerWithKey(playerKey);
-				return Platform.findBestPlay(game, player.rack.tiles());
+				return Platform.findBestPlay(game, player.rack.tiles);
 			})
 			.then(play => res.status(200).send(Fridge.freeze(play)))
 			.catch(e => this.trap(e, res));
@@ -667,7 +672,10 @@ define('server/Server', [
 		 */
 		handle_anotherGame(req, res) {
 			return this.loadGame(req.params.gameKey)
-			.then(game => game.anotherGame())
+			.then(game => {
+				return game.anotherGame()
+				.then(() => res.status(200).send(game.nextGameKey));
+			})
 			.catch(e => this.trap(e, res));
 		}
 
@@ -831,7 +839,7 @@ define('server/Server', [
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Wed Mar 02 2022 14:49:38 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu Mar 10 2022 20:12:43 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

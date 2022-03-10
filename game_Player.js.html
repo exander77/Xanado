@@ -30,7 +30,11 @@
    license information */
 /* eslint-env amd, jquery */
 
-define('game/Player', ['platform', 'game/GenKey', 'game/Rack'], (Platform, GenKey, Rack) => {
+define('game/Player', [
+	'platform', 'game/GenKey', 'game/Rack',
+], (
+	Platform, GenKey, Rack
+) => {
 
 	// Unicode characters
 	const BLACK_CIRCLE = '\u25cf';
@@ -67,13 +71,6 @@ define('game/Player', ['platform', 'game/GenKey', 'game/Rack'], (Platform, GenKe
 			this.name = name;
 
 			/**
-			 * Index of the player in the game, assigned when they
-			 * join a game
-			 * @member {number}
-			 */
-			this.index = -1;
-
-			/**
 			 * Player doesn't have a rack until they join a game, as
 			 * it's only then we know how big it has to be.
 			 * @member {Rack}
@@ -104,6 +101,15 @@ define('game/Player', ['platform', 'game/GenKey', 'game/Rack'], (Platform, GenKe
 			 * @member {number}
 			 */
 			this.timeRemaining = 0;
+
+			/**
+			 * We don't keep a pointer to the dictionary objects so we can
+			 * cheaply serialise and send to the games interface. We just
+			 * keep the name of the relevant object. This dictionary will
+			 * only be used for findBestPlay for robot players.
+			 * @member {string}
+			 */
+			this.dictionary = undefined;
 		}
 
 		/**
@@ -120,6 +126,7 @@ define('game/Player', ['platform', 'game/GenKey', 'game/Rack'], (Platform, GenKe
 					name: this.name,
 					isRobot: this.isRobot,
 					connected: this.isRobot || (game.getConnection(this) !== null),
+					dictionary: this.dictionary,
 					key: this.key,
 					score: this.score,
 					email: ump.email ? true : false,
@@ -139,19 +146,16 @@ define('game/Player', ['platform', 'game/GenKey', 'game/Rack'], (Platform, GenKe
 		}
 
 		/**
-		 * Join a game by drawing an initial rack from the letter bag.
+		 * Draw an initial rack from the letter bag.
 		 * @param {LetterBag} letterBag LetterBag to draw tiles from
-		 * @param {number} rackSize size of racks in this game
-		 * @param {number} index 'Player N'
+		 * @param {number} rackSize size of the rack
 		 */
-		joinGame(letterBag, rackSize, index) {
+		fillRack(letterBag, rackSize) {
 			// +1 to allow space for tile sorting in the UI
 			this.rack = new Rack(rackSize + 1);
 			for (let i = 0; i &lt; rackSize; i++)
 				this.rack.addTile(letterBag.getRandomTile());
-			this.index = index;
 			this.score = 0;
-			console.log(`${this.name} is player ${this.index}`);
 		}
 
 		/**
@@ -216,7 +220,7 @@ define('game/Player', ['platform', 'game/GenKey', 'game/Rack'], (Platform, GenKe
 		 * Generate a simple string representation of the player
 		 */
 		toString() {
-			let s = `Player${this.index} '${this.name}'`;
+			let s = `Player '${this.name}'`;
 			if (this.isRobot)
 				s += ' (Robot)';
 			if (this.key)
@@ -273,34 +277,43 @@ define('game/Player', ['platform', 'game/GenKey', 'game/Rack'], (Platform, GenKe
 
 		/**
 		 * Create score table representation of the player on the browser
-		 * side only.
-		 * @param {Player} thisPlayer the player for whom the DOM is
+		 * side only. This is intended to work both on a full Player
+		 * object, but also on a Player.catalogue of the player.
+		 * @param {Player} player the player (or player.catalogue) who's
+		 * row this is
+		 * @param {string} curKey the key of the player for whom the DOM is
 		 * being generated
 		 * @return {jQuery} DOM object for the score table
 		 */
-		createScoreDOM(thisPlayer) {
-			const $tr = $(`&lt;tr id='player${this.index}'>&lt;/tr>`);
-			$tr.append(`&lt;td class='myTurn'>&amp;#10148;&lt;/td>`);
-			const who = thisPlayer &amp;&amp; thisPlayer.key === this.key
+		createScoreDOM(curKey) {
+			const $tr = $(`&lt;tr class="playerRow" id='player${this.key}'>&lt;/tr>`);
+			$tr.append(`&lt;td class='turnPointer'>&amp;#10148;&lt;/td>`);
+			const $icon = $('&lt;div class="ui-icon">&lt;/div>');
+			$icon.addClass(this.isRobot ? "icon-robot" : "icon-person");
+			$tr.append($("&lt;td>&lt;/td>").append($icon));
+			const who = this.key === curKey
 				? Platform.i18n('You')
 				: this.name;
 			$tr.append(`&lt;td class='playerName'>${who}&lt;/td>`);
 			$tr.append('&lt;td class="remainingTiles">&lt;/td>');
+
 			/**
 			 * Jquery object that contains this player's online status on
 			 * the browser side only.
 			 * @private
 			 * @member {jQuery}
 			 */
-			this.$status = $(`&lt;td class='status offline'>${BLACK_CIRCLE}&lt;/td>`);
+			this.$status = $(`&lt;td class='connectState'>${BLACK_CIRCLE}&lt;/td>`);
 			$tr.append(this.$status);
+			this.$status.addClass(this.connected ? "online" : "offline");
+			
 			/**
 			 * Jquery object that contains this player's score on
 			 * the browser side only.
 			 * @private
 			 * @member {jQuery}
 			 */
-			this.$score = $(`&lt;td class='score'>${this.score}&lt;/td>`);
+			this.$score = $(`&lt;td class='playerScore'>${this.score}&lt;/td>`);
 			$tr.append(this.$score);
 			return $tr;
 		}
@@ -344,7 +357,7 @@ define('game/Player', ['platform', 'game/GenKey', 'game/Rack'], (Platform, GenKe
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Wed Mar 02 2022 14:49:38 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu Mar 10 2022 20:12:43 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

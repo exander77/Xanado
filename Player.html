@@ -195,7 +195,7 @@ it's a robot. If name is a Player object, ignored.</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line14">line 14</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line18">line 18</a>
     </li></ul></dd>
     
 
@@ -245,14 +245,16 @@ it's a robot. If name is a Player object, ignored.</p></td>
 
         
             
-<h4 class="name" id="index"><span class="type-signature"></span>index<span class="type-signature"> :number</span></h4>
+<h4 class="name" id="dictionary"><span class="type-signature"></span>dictionary<span class="type-signature"> :string</span></h4>
 
 
 
 
 <div class="description">
-    <p>Index of the player in the game, assigned when they
-join a game</p>
+    <p>We don't keep a pointer to the dictionary objects so we can
+cheaply serialise and send to the games interface. We just
+keep the name of the relevant object. This dictionary will
+only be used for findBestPlay for robot players.</p>
 </div>
 
 
@@ -261,7 +263,7 @@ join a game</p>
     <ul>
         <li>
             
-<span class="param-type">number</span>
+<span class="param-type">string</span>
 
 
         </li>
@@ -300,7 +302,7 @@ join a game</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line46">line 46</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line84">line 84</a>
     </li></ul></dd>
     
 
@@ -372,7 +374,7 @@ join a game</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line39">line 39</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line43">line 43</a>
     </li></ul></dd>
     
 
@@ -444,7 +446,7 @@ join a game</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line59">line 59</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line56">line 56</a>
     </li></ul></dd>
     
 
@@ -517,7 +519,7 @@ it's only then we know how big it has to be.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line53">line 53</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line50">line 50</a>
     </li></ul></dd>
     
 
@@ -589,7 +591,7 @@ it's only then we know how big it has to be.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line72">line 72</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line69">line 69</a>
     </li></ul></dd>
     
 
@@ -661,7 +663,7 @@ it's only then we know how big it has to be.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line78">line 78</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line75">line 75</a>
     </li></ul></dd>
     
 
@@ -734,7 +736,7 @@ they used</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line66">line 66</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line63">line 63</a>
     </li></ul></dd>
     
 
@@ -887,7 +889,7 @@ state, for sending to the 'games' interface</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line88">line 88</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line94">line 94</a>
     </li></ul></dd>
     
 
@@ -945,7 +947,7 @@ state, for sending to the 'games' interface</p>
     
 
     
-    <h4 class="name" id="createScoreDOM"><span class="type-signature"></span>createScoreDOM<span class="signature">(thisPlayer)</span><span class="type-signature"> &rarr; {jQuery}</span></h4>
+    <h4 class="name" id="createScoreDOM"><span class="type-signature"></span>createScoreDOM<span class="signature">(player, curKey)</span><span class="type-signature"> &rarr; {jQuery}</span></h4>
     
 
     
@@ -954,7 +956,8 @@ state, for sending to the 'games' interface</p>
 
 <div class="description">
     <p>Create score table representation of the player on the browser
-side only.</p>
+side only. This is intended to work both on a full Player
+object, but also on a Player.catalogue of the player.</p>
 </div>
 
 
@@ -990,7 +993,7 @@ side only.</p>
 
         <tr>
             
-                <td class="name"><code>thisPlayer</code></td>
+                <td class="name"><code>player</code></td>
             
 
             <td class="type">
@@ -1006,7 +1009,31 @@ side only.</p>
 
             
 
-            <td class="description last"><p>the player for whom the DOM is
+            <td class="description last"><p>the player (or player.catalogue) who's
+row this is</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>curKey</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>the key of the player for whom the DOM is
 being generated</p></td>
         </tr>
 
@@ -1048,7 +1075,7 @@ being generated</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line253">line 253</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line260">line 260</a>
     </li></ul></dd>
     
 
@@ -1301,7 +1328,7 @@ the server side only.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line217">line 217</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line221">line 221</a>
     </li></ul></dd>
     
 
@@ -1359,7 +1386,7 @@ the server side only.</p>
     
 
     
-    <h4 class="name" id="joinGame"><span class="type-signature"></span>joinGame<span class="signature">(letterBag, rackSize, index)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="fillRack"><span class="type-signature"></span>fillRack<span class="signature">(letterBag, rackSize)</span><span class="type-signature"></span></h4>
     
 
     
@@ -1367,7 +1394,7 @@ the server side only.</p>
 
 
 <div class="description">
-    <p>Join a game by drawing an initial rack from the letter bag.</p>
+    <p>Draw an initial rack from the letter bag.</p>
 </div>
 
 
@@ -1442,30 +1469,7 @@ the server side only.</p>
 
             
 
-            <td class="description last"><p>size of racks in this game</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>index</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>'Player N'</p></td>
+            <td class="description last"><p>size of the rack</p></td>
         </tr>
 
     
@@ -1506,7 +1510,7 @@ the server side only.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line119">line 119</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line125">line 125</a>
     </li></ul></dd>
     
 
@@ -1644,7 +1648,7 @@ side only.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line293">line 293</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line306">line 306</a>
     </li></ul></dd>
     
 
@@ -1733,7 +1737,7 @@ side only.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line284">line 284</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line297">line 297</a>
     </li></ul></dd>
     
 
@@ -1821,7 +1825,7 @@ side only.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line132">line 132</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line136">line 136</a>
     </li></ul></dd>
     
 
@@ -1985,7 +1989,7 @@ timer expires</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line146">line 146</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line150">line 150</a>
     </li></ul></dd>
     
 
@@ -2073,7 +2077,7 @@ timer expires</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line178">line 178</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line182">line 182</a>
     </li></ul></dd>
     
 
@@ -2161,7 +2165,7 @@ timer expires</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line202">line 202</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line206">line 206</a>
     </li></ul></dd>
     
 
@@ -2249,7 +2253,7 @@ timer expires</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line190">line 190</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line194">line 194</a>
     </li></ul></dd>
     
 
@@ -2301,7 +2305,7 @@ timer expires</p></td>
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Wed Mar 02 2022 14:49:38 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu Mar 10 2022 20:12:43 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>
