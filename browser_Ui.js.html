@@ -31,12 +31,14 @@
 define('browser/Ui', [
 	'socket.io', 'browser/Dialog',
 	'game/Fridge',
-	'game/Tile', 'game/Bag', 'game/Rack', 'game/Board', 'game/Game',
+	'game/Tile', 'game/Bag', 'game/Rack', 'game/Board',
+	'game/Game', 'game/Player',
 	'jquery', 'jqueryui', 'cookie', 'browser/icon_button'
 ], (
 	Socket, Dialog,
 	Fridge,
-	Tile, Bag, Rack, Board, Game
+	Tile, Bag, Rack, Board,
+	Game, Player
 ) => {
 
 	const SETTINGS_COOKIE = 'crossword_settings';
@@ -313,7 +315,7 @@ define('browser/Ui', [
 			const $narrative = $('&lt;div class="game-outcome">&lt;/div>');
 			game.players.forEach(player => {
 				const isMe = this.isPlayer(player.key);
-				const name = isMe ? $.i18n('You') : player.name;
+				const name = isMe ? $.i18n("You") : player.name;
 				const $gsd = $('&lt;div class="rack-gains">&lt;/div>');
 
 				if (player.score === winningScore) {
@@ -369,7 +371,8 @@ define('browser/Ui', [
 		 * @param {object} message message object { sender: string,
 		 * text: i18n message identifier or plain text, args[]: i18n arguments
 		 */
-		processMessage(message) {
+		handle_message(message) {
+			console.debug("--> message");
 			let args = [ message.text ];
 			if (typeof message.args === 'string')
 				args.push(message.args);
@@ -400,43 +403,59 @@ define('browser/Ui', [
 
 		/**
 		 * Process a tick from the server. Does nothing in an untimed game.
-		 * @param {object} tick {player: number, timeout: number }
+		 * @param {object} params Parameters
+		 * @param {string} gameKey game key
+		 * @param {string} playerKey player key
+		 * @param {string} secondsToPlay seconds left for this player to play
 		 */
-		processTick(tick) {
+		handle_tick(params) {
+			// console.debug("--> tick");
+			if (params.gameKey !== this.game.key)
+				console.error(`key mismatch ${this.game.key}`);
 			const $to = $('#timeout')
-				  .removeClass('tick-alert-high tick-alert-medium tick-alert-low');
-			if (tick.secondsToPlay &lt;= 0) {
+			.removeClass('tick-alert-high tick-alert-medium tick-alert-low');
+
+			if (params.secondsToPlay &lt;= 0) {
 				$to.hide();
 				return;
 			}
+
 			let stick = '';
-			if (this.isPlayer(tick.playerKey)) {
-				this.player.secondsToPlay = tick.secondsToPlay;
-				stick = $.i18n('ui-tick-you', Math.floor(tick.secondsToPlay));
-				if (tick.secondsToPlay &lt; 10 &amp;&amp; this.settings.warnings)
+			if (this.isPlayer(params.playerKey)) {
+				this.player.secondsToPlay = params.secondsToPlay;
+				stick = $.i18n('ui-tick-you', Math.floor(params.secondsToPlay));
+				if (params.secondsToPlay &lt; 10 &amp;&amp; this.settings.warnings)
 					this.playAudio('tick');
-				if (tick.secondsToPlay &lt; 15)
-					$to.fadeOut(100).addClass('tick-alert-high');
-				else if (tick.secondsToPlay &lt; 45)
-					$to.fadeOut(100).addClass('tick-alert-medium');
-				else if (tick.secondsToPlay &lt; 90)
-					$to.fadeOut(100).addClass('tick-alert-low');
 			}
 			else
 				stick = $.i18n('ui-tick-them',
-							   this.game.getPlayer(tick.playerKey).name,
-							   tick.secondsToPlay);
+							   this.game.getPlayer(params.playerKey).name,
+							   params.secondsToPlay);
+
+			if (params.secondsToPlay &lt; 15)
+				$to.fadeOut(100).addClass('tick-alert-high');
+			else if (params.secondsToPlay &lt; 45)
+				$to.fadeOut(100).addClass('tick-alert-medium');
+			else if (params.secondsToPlay &lt; 90)
+				$to.fadeOut(100).addClass('tick-alert-low');
 			$to.text(stick).fadeIn(200);
 		}
 
 		/**
 		 * Handle game-ended confirmation. This confirmation will come after
-		 * a player confirms that the previous player's turn is acceptable
+		 * a player accepts that the previous player's final turn is OK
 		 * and they don't intend to challenge.
-		 * @param {string} endState reason why game ended (i18n message id)
+		 * @param {object} params parameters
+		 * @param {string} params.key game that is ending (should always
+		 * be this.game.key)
+		 * @param {string} params.state reason why game ended (i18n message id)
 		 */
-		processGameOverConfirmed(endState) {
-			this.game.state = endState;
+		handle_gameOverConfirmed(params) {
+			console.debug(
+				`--> gameOverConfirmed ${params.key} ${params.state}`);
+			if (params.key !== this.game.key)
+				console.error(`key mismatch ${this.game.key}`);
+			this.game.state = params.state;
 			// unplace any pending move
 			this.takeBackTiles();
 			this.logEndMessage(this.settings.cheers);
@@ -445,8 +464,25 @@ define('browser/Ui', [
 			else
 				this.setMoveAction(/*i18n ui-*/'anotherGame');
 			this.enableTurnButton(true);
-			this.notify($.i18n('ui-notify-title-game-over'),
-						$.i18n('ui-notify-body-game-over'));
+			this.notify($.i18n("Game over"),
+						$.i18n("Your game is over..."));
+		}
+
+		/**
+		 * Handle nextGame event. This tells the UI that a follow-on
+		 * game is available.
+		 * @param {object} params parameters
+		 * @param {string} params.key game that is ending (should always
+		 * be this.game.key)
+		 * @param {string} params.nextGameKey key for next game
+		 */
+		handle_nextGame(params) {
+			console.debug(
+				`--> nextGame ${params.key} -> ${params.nextGameKey}`);
+			if (params.key !== this.game.key)
+				console.error(`key mismatch ${this.game.key}`);
+			this.game.nextGameKey = params.nextGameKey;
+			this.setMoveAction(/*i18n ui-*/'nextGame');
 		}
 
 		/**
@@ -538,6 +574,11 @@ define('browser/Ui', [
 			}
 		}
 
+		updatePlayerTable() {
+			const $playerTable = this.game.createPlayerTableDOM(this.player);
+			$('#playerList').html($playerTable);
+		}
+
 		/**
 		 * Show who's turn it is
 		 */
@@ -554,11 +595,11 @@ define('browser/Ui', [
 		updateTileCounts() {
 			const remains = this.game.letterBag.remainingTileCount();
 			if (remains > 0) {
-				const mess = $.i18n('ui-bag-remaining', remains);
+				const mess = $.i18n("$1 tiles left in bag", remains);
 				$('#letterbag').text(mess);
 				$('#scoresBlock td.remaining-tiles').empty();
 			} else {
-				$('#letterbagStatus').text($.i18n('ui-bag-empty'));
+				$('#letterbag').text($.i18n("The letter bag is empty"));
 				const countElements = $('#scoresBlock td.remaining-tiles');
 				this.game.players.forEach(
 					(player, i) =>
@@ -630,8 +671,7 @@ define('browser/Ui', [
 			this.swapRack = new Rack(this.game.board.swapCount);
 
 			this.player = this.game.getPlayer(playerKey);
-			const $playerTable = this.game.createPlayerTableDOM(this.player);
-			$('#playerList').append($playerTable);
+			this.updatePlayerTable();
 
 			if (this.player) {
 				$('#rackControls').prepend(this.player.rack.createDOM('Rack'));
@@ -645,7 +685,7 @@ define('browser/Ui', [
 			const $board = this.game.board.createDOM();
 			$('#board').append($board);
 
-			this.log($.i18n('Game started'), 'game-state');
+			this.log($.i18n("Game started"), 'game-state');
 			if (game.secondsPerPlay > 0)
 				$("#timeout").show();
 			else 
@@ -700,7 +740,7 @@ define('browser/Ui', [
 				$('#takeBackButton').button({
 					showLabel: false,
 					icon: 'take-back-icon',
-					title: $.i18n('Take back'),
+					title: $.i18n("Take back"),
 					classes: {
 						'ui-button-icon': 'fat-icon'
 					}				
@@ -733,31 +773,39 @@ define('browser/Ui', [
 
 			this.socket
 
-			.on('connect', () => {
+			.on('connect', skt => {
+				// Note: 'connect' is synonymous with 'connection'
+				// Socket has connected to the server
+				console.debug('--> connect');
 				if ($reconnectDialog) {
 					$reconnectDialog.dialog('close');
 					$reconnectDialog = null;
 				}
-				console.debug('Server: Socket connected');
 				if (this.wasConnected) {
 					this.cancelNotification();
 				} else {
 					this.wasConnected = true;
+					const playerKey = this.player ? this.player.key : undefined;
+					// Confirm to the server that we're ready to play
+					console.debug('&lt;-- join');
 					this.socket.emit('join', {
 						gameKey: this.game.key,
-						playerKey: this.player ? this.player.key : undefined
+						playerKey: playerKey
 					});
 				}
 			})
 
-			.on('disconnect', () => {
-				console.debug('Socket disconnected');
+			.on('disconnect', skt => {
+				// Socket has disconnected for some reason
+				// (server died, maybe?) Back off and try to reconnect.
+				console.debug(`--> disconnect`);
 				$reconnectDialog = $('#alertDialog')
 				.text($.i18n('ui-server-disconnected'))
 				.dialog({ modal: true });
 				const ui = this;
 				setTimeout(() => {
 					// Try and rejoin after a 3s timeout
+					console.debug('&lt;-- join (after timeout)');
 					ui.socket.emit('join', {
 						gameKey: this.game.key,
 						playerKey: this.player ? this.player.key : undefined
@@ -766,73 +814,105 @@ define('browser/Ui', [
 
 			})
 
-			// Custom events
+			// socket.io events 'new_namespace', 'disconnecting',
+			// 'initial_headers', 'headers', 'connection_error' are not handled
+
+			// Custom messages
 
 			.on('connections', info => {
-				// Update active connections
+				// Update list of active connections. info is a list of
+				// Player.simple
+				console.debug("--> connections");
 				for (let player of this.game.players)
 					player.online(false);
-				for (let key of info) {
-					const player = this.game.getPlayerWithKey(key);
+				for (let cat of info) {
+					if (!cat) continue;
+					let player = this.game.getPlayerWithKey(cat.key);
 					if (player)
-						player.online(true);
+						player.connected = cat.connected;
+					else {
+						// New player in game
+						player = new Player(cat);
+						this.game.addPlayer(player);
+						this.updatePlayerTable();
+					}
+					player.online(player.connected);
 				}
 			})
 
-			.on('turn', turn => this.processTurn(turn))
+			// A turn has been taken. turn is a Turn
+			.on('turn', turn => this.handle_turn(turn))
 
-			.on('tick', tick => this.processTick(tick))
+			// Server clock tick.
+			.on('tick', params => this.handle_tick(params))
 
-			.on('gameOverConfirmed', endState =>
-				this.processGameOverConfirmed(endState))
+			// Game has finished.
+			.on('gameOverConfirmed', params =>
+				this.handle_gameOverConfirmed(params))
 
-			.on('nextGame',	nextGameKey => {
-				this.game.nextGameKey = nextGameKey;
-				this.setMoveAction(/*i18n ui-*/'nextGame');
-			})
+			// A follow-on game is available
+			.on('nextGame',	params => this.handle_nextGame(params))
 
-			.on('message', message => this.processMessage(message))
+			// A message has been sent
+			.on('message', message => this.handle_message(message))
 
-			.on('pause', player => this.pause(player, true))
+			// Game has been paused
+			.on('pause', params => this.handle_pause(params))
 
-			.on('unpause', player => this.pause(player, false));
+			// Game has been unpaused
+			.on('unpause', params => this.handle_unpause(params))
+
+			.on('join', () => console.log("--> join"));
 		}
 
 		/**
+		 * Handle a pause event.
 		 * By using a modal dialog to report the pause, we block further
 		 * interaction until the pause is released.
-		 * @param {string} player name of player who paused/released
-		 * @param {boolean} isPaused whether the game is to be paused/released
-		 * @private
+		 * @param {object} params Parameters
+		 * @param {string} params.key game key
+		 * @param {string} params.name name of player who paused/released
 		 */
-		pause(player, isPaused) {
-			console.log(`${player} has ${isPaused?"":"un"}paused`);
-			if (isPaused) {
-				$(".Surface .letter").addClass("hidden");
-				$(".Surface .score").addClass("hidden");
-				$('#pauseBanner')
-				.text($.i18n('ui-unpause-text', player));
-				$('#pauseDialog')
-				.dialog({
-					dialogClass: "no-close",
-					modal: true,
-					buttons: [
-						{
-							text: $.i18n('Continue game'),
-							click: () => {
-								this.sendCommand('unpause');
-								$('#pauseDialog').dialog("close");
-							}
+		handle_pause(params) {
+			console.debug(`--> pause ${params.name}`);
+			if (params.key !== this.game.key)
+				console.error(`key mismatch ${this.game.key}`);
+			$(".Surface .letter").addClass("hidden");
+			$(".Surface .score").addClass("hidden");
+			$('#pauseBanner')
+			.text($.i18n("$1 has paused the game", params.name));
+			$('#pauseDialog')
+			.dialog({
+				dialogClass: "no-close",
+				modal: true,
+				buttons: [
+					{
+						text: $.i18n("Continue the game"),
+						click: () => {
+							this.sendCommand('unpause');
+							$('#pauseDialog').dialog("close");
 						}
-					]});
-			} else {
-				$(".Surface .letter").removeClass("hidden");
-				$(".Surface .score").removeClass("hidden");
-				$("#pauseButton")
-				.button("option", "label", $.i18n('Pause game'));
-				$('#pauseDialog')
-				.dialog("close");
-			}
+					}
+				]});
+		}
+
+		/**
+		 * Handle an unpause event.
+		 * Close the modal dialog used to report the pause.
+		 * @param {object} params Parameters
+		 * @param {string} params.key game key
+		 * @param {string} params.name name of player who paused/released
+		 */
+		handle_unpause(params) {
+			console.debug(`--> unpause ${params.name}`);
+			if (params.key !== this.game.key)
+				console.error(`key mismatch ${this.game.key}`);
+			$(".Surface .letter").removeClass("hidden");
+			$(".Surface .score").removeClass("hidden");
+			$("#pauseButton")
+			.button("option", "label", $.i18n("Pause game"));
+			$('#pauseDialog')
+			.dialog("close");
 		}
 
 		/**
@@ -845,6 +925,7 @@ define('browser/Ui', [
 			$('#chatInput input')
 			.on('change', function() {
 				// Send chat
+				console.debug('&lt;-- message');
 				ui.socket.emit(
 					'message',
 					{
@@ -869,7 +950,7 @@ define('browser/Ui', [
 				$("#pauseButton").toggle(this.game.secondsPerPlay > 0);
 				$('#settingsDialog')
 				.dialog({
-					title: $.i18n('Options'),
+					title: $.i18n("Options"),
 					modal: true,
 					width: 'auto'
 				});
@@ -931,7 +1012,8 @@ define('browser/Ui', [
 				else
 					this.moveTypingCursor(0, 1);
 			} else
-				$('#logMessages').append($.i18n('ui-log-letter-not-on-rack', letter));
+				$('#logMessages').append(
+					$.i18n('ui-log-letter-not-on-rack', letter));
 		}
 
 		/**
@@ -1147,10 +1229,15 @@ define('browser/Ui', [
 			// if the last player's rack is empty, it couldn't be refilled
 			// and the game might be over.
 			const lastPlayer = this.game.previousPlayer();
+			if (!lastPlayer)
+				return;
 			if (!this.game.hasEnded()
 				&amp;&amp; lastPlayer.rack.isEmpty()) {
 				this.lockBoard(true);
-				this.setMoveAction(/*i18n ui-*/'confirmGameOver');
+				if (this.player.key === lastPlayer.key)
+					$('#turnButton').hide();
+				else
+					this.setMoveAction(/*i18n ui-*/'confirmGameOver');
 			} else if (this.placedCount > 0) {
 				// Player has dropped some tiles on the board
 				// (tileCount > 0), move action is to make the move
@@ -1218,8 +1305,8 @@ define('browser/Ui', [
 		 * modified the game state.
 		 * @param {Turn} turn a Turn object
 		 */
-		processTurn(turn) {
-			console.debug('Turn ', turn);
+		handle_turn(turn) {
+			console.debug('--> turn ', turn);
 			// Take back any locally placed tiles
 			this.game.board.forEachSquare(
 				boardSquare => {
@@ -1248,7 +1335,7 @@ define('browser/Ui', [
 			case 'took-back':
 				// Move new tiles out of challenged player's rack
 				// into the bag
-				for (let newTile of turn.replacments) {
+				for (let newTile of turn.replacements) {
 					const tile = player.rack.removeTile(newTile);
 					this.game.letterBag.returnTile(tile);
 				}
@@ -1270,7 +1357,7 @@ define('browser/Ui', [
 						if (this.settings.warnings)
 							this.playAudio('oops');
 						this.notify(
-							$.i18n('ui-notify-title-challenged'),
+							$.i18n("Challenged!"),
 							$.i18n('ui-notify-body-challenged',
 								   this.game.getPlayer(turn.challengerKey).name,
 								   -turn.score));
@@ -1279,7 +1366,7 @@ define('browser/Ui', [
 
 				if (turn.type == 'took-back') {
 					this.notify(
-						$.i18n('ui-notify-title-retracted'),
+						$.i18n("Move retracted!"),
 						$.i18n('ui-notify-body-retracted',
 							   this.game.getPlayer(turn.challengerKey).name));
 				}
@@ -1291,13 +1378,13 @@ define('browser/Ui', [
 					if (this.settings.warnings)
 						this.playAudio('oops');
 					this.notify(
-						$.i18n('ui-notify-title-you-failed'),
+						$.i18n("Your challenge failed!"),
 						$.i18n('ui-notify-body-you-failed'));
 				} else {
 					if (this.settings.warnings)
 						this.playAudio('oops');
 					this.notify(
-						$.i18n('ui-notify-title-they-failed'),
+						$.i18n("Failed challenge!"),
 						$.i18n('ui-notify-body-they-failed', player.name));
 				}
 				break;
@@ -1316,16 +1403,18 @@ define('browser/Ui', [
 						$div.addClass('last-placement');
 					}
 				}
-				// Shrink the bag by the number of placed tiles. This is purely
-				// to keep the counts in synch, we never use tiles taken
-				// from the bag on the client side.
+				// Shrink the bag by the number of new
+				// tiles. This is purely to keep the counts in
+				// synch, we never use tiles taken from the bag on
+				// the client side.
 				this.game.letterBag.getRandomTiles(
-					this.game.letterBag.remainingTileCount() - turn.leftInBag);
+					turn.replacements.length);
 
 				// Deliberate fall-through to 'swap'
 
 			case 'swap':
-				// Add new tiles to the rack
+				// Add replacement tiles to the rack. Number of tiles
+				// in letter bag doesn't change.
 				for (let newTile of turn.replacements)
 					player.rack.addTile(newTile);
 
@@ -1357,7 +1446,7 @@ define('browser/Ui', [
 				if (this.isPlayer(turn.nextToGoKey)
 					&amp;&amp; turn.type !== 'took-back') {
 					// It's our turn, and we didn't just take back
-					this.notify($.i18n('ui-notify-title-your-turn'),
+					this.notify($.i18n('Your turn'),
 								$.i18n('ui-notify-body-your-turn',
 									   this.game.getPlayer(turn.playerKey).name));
 
@@ -1492,7 +1581,8 @@ define('browser/Ui', [
 		}
 
 		/**
-		 * Handler for the 'Another game" button. Invoked via makeMove.
+		 * Handler for the 'Another game like this" button.
+		 * Invoked via makeMove.
 		 */
 		anotherGame() {
 			$.post(`/anotherGame/${this.game.key}`)
@@ -1537,7 +1627,8 @@ define('browser/Ui', [
 			$('#turnButton')
 			.data('action', action)
 			.empty()
-			.append($.i18n(`ui-${action}`));
+			.append($.i18n(`ui-${action}`))
+			.show();
 		}
 
 		/**
@@ -1682,13 +1773,13 @@ define('browser/Ui', [
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-dawg_compressor.html">dawg/compressor</a></li><li><a href="module-dawg_explore.html">dawg/explore</a></li><li><a href="module-design_valett.html">design/valett</a></li><li><a href="module-game_findBestPlay.html">game/findBestPlay</a></li><li><a href="module-i18n_checkTranslation.html">i18n/checkTranslation</a></li></ul><h3>Classes</h3><ul><li><a href="Board.html">Board</a></li><li><a href="BrowserPlatform.html">BrowserPlatform</a></li><li><a href="Database.html">Database</a></li><li><a href="Dialog.html">Dialog</a></li><li><a href="Dictionary.html">Dictionary</a></li><li><a href="Edition.html">Edition</a></li><li><a href="FileDatabase.html">FileDatabase</a></li><li><a href="Fridge.html">Fridge</a></li><li><a href="Game.html">Game</a></li><li><a href="I18N.html">I18N</a></li><li><a href="LetterBag.html">LetterBag</a></li><li><a href="Move.html">Move</a></li><li><a href="Platform.html">Platform</a></li><li><a href="Player.html">Player</a></li><li><a href="Rack.html">Rack</a></li><li><a href="Server.html">Server</a></li><li><a href="ServerPlatform.html">ServerPlatform</a></li><li><a href="Square.html">Square</a></li><li><a href="Surface.html">Surface</a></li><li><a href="Tile.html">Tile</a></li><li><a href="Trie.html">Trie</a></li><li><a href="TrieNode.html">TrieNode</a></li><li><a href="Turn.html">Turn</a></li><li><a href="Ui.html">Ui</a></li><li><a href="UserManager.html">UserManager</a></li><li><a href="XanadoPass.html">XanadoPass</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-dawg_compressor.html">dawg/compressor</a></li><li><a href="module-dawg_explore.html">dawg/explore</a></li><li><a href="module-design_valett.html">design/valett</a></li><li><a href="module-game_findBestPlay.html">game/findBestPlay</a></li></ul><h3>Classes</h3><ul><li><a href="Board.html">Board</a></li><li><a href="BrowserPlatform.html">BrowserPlatform</a></li><li><a href="Database.html">Database</a></li><li><a href="Dialog.html">Dialog</a></li><li><a href="Dictionary.html">Dictionary</a></li><li><a href="Edition.html">Edition</a></li><li><a href="FileDatabase.html">FileDatabase</a></li><li><a href="Fridge.html">Fridge</a></li><li><a href="Game.html">Game</a></li><li><a href="I18N.html">I18N</a></li><li><a href="LetterBag.html">LetterBag</a></li><li><a href="Move.html">Move</a></li><li><a href="Platform.html">Platform</a></li><li><a href="Player.html">Player</a></li><li><a href="Rack.html">Rack</a></li><li><a href="Server.html">Server</a></li><li><a href="ServerPlatform.html">ServerPlatform</a></li><li><a href="Square.html">Square</a></li><li><a href="Surface.html">Surface</a></li><li><a href="Tile.html">Tile</a></li><li><a href="Trie.html">Trie</a></li><li><a href="TrieNode.html">TrieNode</a></li><li><a href="Turn.html">Turn</a></li><li><a href="Ui.html">Ui</a></li><li><a href="UserManager.html">UserManager</a></li><li><a href="XanadoPass.html">XanadoPass</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sun Mar 13 2022 07:58:10 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Mon Mar 21 2022 10:05:56 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

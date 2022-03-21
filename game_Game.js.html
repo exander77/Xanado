@@ -262,6 +262,8 @@ define('game/Game', [
 				player = this.getPlayer(this.whosTurnKey);
 			else if (typeof player === 'string')
 				player = this.getPlayer(player);
+			if (!player)
+				return undefined;
 			const index = this.players.findIndex(p => p.key === player.key);
 			if (index &lt; 0)
 				throw new Error(`${player.key} not found in ${this.key}`);
@@ -446,29 +448,31 @@ define('game/Game', [
 		 * @param {Object} data to send with message
 		 */
 		notifyPlayer(player, message, data) {
-			if (this._connections)
-				this._connections.forEach(
-					socket => {
-						if (socket.player === player)
-							socket.emit(message, data);
-						return false;
-					});
+			console.log(`&lt;-${player.key}- ${message}`, data);
+			// Player may be connected several times
+			this._connections.forEach(
+				socket => {
+					if (socket.player === player)
+						socket.emit(message, data);
+					return false;
+				});
 		}
 
 		/**
-		 * Broadcast a message to all players. Note that a player
+		 * Broadcast a message to all players and monitors. Note that a player
 		 * may be connected multiple times, through different sockets.
 		 * @param {string} message to send
 		 * @param {Object} data to send with message
 		 */
 		notifyPlayers(message, data) {
+			console.log(`&lt;-*- ${message}`, data);
 			this._connections.forEach(socket => socket.emit(message, data));
 		}
 
 		/**
-		 * Wrap up after a command handler. Log the command, determine
-		 * whether the game has ended, save state and notify game
-		 * listeners.
+		 * Wrap up after a command handler that is returning a Turn.
+		 * Log the command, determine whether the game has ended,
+		 * save state and notify game listeners.
 		 * @param {Turn} turn the Turn to finish
 		 * @return {Promise} that resolves when the game has been saved
 		 * and players have been notified.
@@ -481,13 +485,17 @@ define('game/Game', [
 
 			return this.save()
 			.then(() => {
-				console.log('Notifying turn', turn);
 				this.notifyPlayers('turn', turn);
 
 				// if the game has ended, send notification.
 				if (this.state !== 'playing') {
-					console.log('Game over', this.state);
-					this.notifyPlayers('gameOverConfirmed', this.state);
+					console.log(`${this.key} '${this.state}'`);
+					this.notifyPlayers(
+						'gameOverConfirmed',
+						{
+							key: this.key,
+							state: this.state
+						});
 					return Promise.resolve();
 				}
 
@@ -536,29 +544,29 @@ define('game/Game', [
 			default:
 				return names.slice(0, length - 1).join(', ')
 				// no Oxford comma
-				+ ` ${Platform.i18n('and')} ${names[length - 1]}`;
+				+ ` ${Platform.i18n("and")} ${names[length - 1]}`;
 			}
 		}
 
-		/**
-		 * Promise to email invitations to players due to play in this game
-		 * @param {string} serverURL URL of the server for this game
-		 * @param {Object} config configuration object
-		 * @param {UserManager} um user manager for getting emails
-		 * @param {string} senderKey user key for the player sending the mail
-		 * @return {Promise} that resolves to a {string[]} of player names who
-		 * were sent mail
-		 */
-		emailInvitations(serverURL, config, um, senderKey) {
-			if (!config.mail || !config.mail.transport)
-				return Promise.reject('Mail is not configured');
-
-			return Promise.all(this.players.map(
-				player => player.emailInvitation(
-					Platform.i18n('email-invite',
-								  this.playerListText(player)),
-					`${serverURL}/game/${this.key}`, config, um, senderKey)));
-		}
+//		/**
+//		 * Promise to email invitations to players due to play in this game
+//		 * @param {string} serverURL URL of the server for this game
+//		 * @param {Object} config configuration object
+//		 * @param {UserManager} um user manager for getting emails
+//		 * @param {string} senderKey user key for the player sending the mail
+//		 * @return {Promise} that resolves to a {string[]} of player names who
+//		 * were sent mail
+//		 */
+//		emailInvitations(serverURL, config, um, senderKey) {
+//			if (!config.mail || !config.mail.transport)
+//				return Promise.reject('Mail is not configured');
+//
+//			return Promise.all(this.players.map(
+//				player => player.emailInvitation(
+//					Platform.i18n('email-invite',
+//								  this.playerListText(player)),
+//					`${serverURL}/game/${this.key}`, config, um, senderKey)));
+//		}
 
 		/**
 		 * Promise to email reminders to the next player due to
@@ -628,9 +636,15 @@ define('game/Game', [
 		 * as identified by their key.
 		 */
 		updateConnections() {
-			this.notifyPlayers(
-				'connections',
-				this._connections.map(socket => socket.player.key));
+			Promise.all(
+				this._connections
+				.filter(socket => socket.player instanceof Player)
+				.map(socket => socket.player.simple(this)
+					 .then(cat => {
+						 cat.gameKey = this.key;
+						 return cat;
+					 })))
+			.then(res => this.notifyPlayers('connections', res));
 		}
 
 		/**
@@ -658,9 +672,9 @@ define('game/Game', [
 		 * works on server side
 		 * @return {Promise} resolving to a simple object with key game data
 		 */
-		catalogue(um) {
+		simple(um) {
 			return Promise.all(
-				this.players.map(player => player.catalogue(this, um)))
+				this.players.map(player => player.simple(this, um)))
 			.then(ps => {
 				return {
 					key: this.key,
@@ -702,7 +716,8 @@ define('game/Game', [
 			// device due to some issue (e.g. poor comms)
 			const knownSocket = this.getConnection(player);
 			if (knownSocket !== null) {
-				console.log('WARNING:', player, 'already connected to', this);
+				console.log('WARNING:', player.key, 'already connected to',
+							this.key);
 			} else if (player.key === this.whosTurn
 					   &amp;&amp; this.state === 'playing') {
 				const to = (player.secondsToPlay > 0)
@@ -737,12 +752,11 @@ define('game/Game', [
 			}
 
 			// Add disconnect listener
-			const game = this;
 			socket.on('disconnect', () => {
 				console.log(`${socket.player.toString()} disconnected`);
 				this._connections = this._connections.filter(
 					sock => sock !== socket);
-				game.updateConnections();
+				this.updateConnections();
 			});
 		}
 
@@ -757,6 +771,7 @@ define('game/Game', [
 			this.notifyPlayers(
 				'tick',
 				{
+					gameKey: this.key,
 					playerKey: player.key,
 					secondsToPlay: player.secondsToPlay
 				});
@@ -787,7 +802,7 @@ define('game/Game', [
 				// Broadcast a ping every second
 				this._intervalTimer = setInterval(() => {
 					const pnext = this.getPlayer();
-					if (pnext.secondsToPlay > 0)
+					if (pnext &amp;&amp; pnext.secondsToPlay > 0)
 						this.tick();
 				}, 1000);
 			}
@@ -858,11 +873,11 @@ define('game/Game', [
 					sender: /*i18n*/'Advisor'
 				};
 				if (!bestPlay)
-					hint.text = /*i18n*/'No play';
+					hint.text = /*i18n*/"Can't find a play";
 				else {
 					console.log(bestPlay);
 					const start = bestPlay.placements[0];
-					hint.text = /*i18n*/'Hint';
+					hint.text = /*i18n*/"Hint";
 					const words = bestPlay.words.map(w => w.word).join(',');
 					hint.args = [
 						words, start.row + 1, start.col + 1, bestPlay.score
@@ -874,8 +889,8 @@ define('game/Game', [
 				
 				// Tell *everyone* that they asked for a hint
 				this.notifyPlayers('message', {
-					sender: /*i18n*/'Advisor',
-					text: /*i18n*/'$1 cheated',
+					sender: /*i18n*/"Advisor",
+					text: /*i18n*/"$1 asked for a hint",
 					args: [ player.name ]
 				});
 			})
@@ -883,7 +898,7 @@ define('game/Game', [
 				console.log('Error', e);
 				this.notifyPlayers(
 					'message', {
-						sender: /*i18n*/'Advisor',
+						sender: /*i18n*/"Advisor",
 						text: e.toString() });
 			});
 		}
@@ -954,8 +969,8 @@ define('game/Game', [
 			const player = this.getPlayer();
 			player.stopTimer();
 
-			console.log(`makeMove ${player.name}`, move);
-			console.log(`Player's rack is ${player.rack}`);
+			console.log(move);
+			//console.log(`Player's rack is ${player.rack}`);
 
 			// Fire up a thread to generate advice and wait for it
 			// to complete. We can't do this asynchronously because
@@ -1023,7 +1038,7 @@ define('game/Game', [
 				if (this.allPassedTwice()) {
 					this.stopTheClock();
 					this.stopPlayerTimers();
-					this.state = /*i18n*/'All passed twice';
+					this.state = /*i18n*/"All players passed twice";
 				} else
 					this.startTurn(this.nextPlayer());
 			}
@@ -1080,14 +1095,20 @@ define('game/Game', [
 				console.log(`${player.name} has unpaused game`);
 				this.startTheClock();
 				this.restartPlayerTimers();
-				this.notifyPlayers('unpause', player.name);
+				this.notifyPlayers('unpause', {
+					key: this.key,
+					name: player.name
+				});
 				this.pausedBy = undefined;
 			} else {
 				this.pausedBy = player.name;
 				console.log(`${this.pausedBy} has paused game`);
 				this.stopTheClock();
 				this.stopPlayerTimers();
-				this.notifyPlayers('pause', player.name);
+				this.notifyPlayers('pause', {
+					key: this.key,
+					name: player.name
+				});
 			}
 			return Promise.resolve();
 		}
@@ -1221,7 +1242,7 @@ define('game/Game', [
 			if (this.allPassedTwice()) {
 				this.stopTheClock();
 				this.stopPlayerTimers();
-				return this.confirmGameOver(/*i18n*/'All passed twice');
+				return this.confirmGameOver(/*i18n*/"All players passed twice");
 			} else
 				this.startTurn(this.nextPlayer());
 
@@ -1398,13 +1419,13 @@ define('game/Game', [
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-dawg_compressor.html">dawg/compressor</a></li><li><a href="module-dawg_explore.html">dawg/explore</a></li><li><a href="module-design_valett.html">design/valett</a></li><li><a href="module-game_findBestPlay.html">game/findBestPlay</a></li><li><a href="module-i18n_checkTranslation.html">i18n/checkTranslation</a></li></ul><h3>Classes</h3><ul><li><a href="Board.html">Board</a></li><li><a href="BrowserPlatform.html">BrowserPlatform</a></li><li><a href="Database.html">Database</a></li><li><a href="Dialog.html">Dialog</a></li><li><a href="Dictionary.html">Dictionary</a></li><li><a href="Edition.html">Edition</a></li><li><a href="FileDatabase.html">FileDatabase</a></li><li><a href="Fridge.html">Fridge</a></li><li><a href="Game.html">Game</a></li><li><a href="I18N.html">I18N</a></li><li><a href="LetterBag.html">LetterBag</a></li><li><a href="Move.html">Move</a></li><li><a href="Platform.html">Platform</a></li><li><a href="Player.html">Player</a></li><li><a href="Rack.html">Rack</a></li><li><a href="Server.html">Server</a></li><li><a href="ServerPlatform.html">ServerPlatform</a></li><li><a href="Square.html">Square</a></li><li><a href="Surface.html">Surface</a></li><li><a href="Tile.html">Tile</a></li><li><a href="Trie.html">Trie</a></li><li><a href="TrieNode.html">TrieNode</a></li><li><a href="Turn.html">Turn</a></li><li><a href="Ui.html">Ui</a></li><li><a href="UserManager.html">UserManager</a></li><li><a href="XanadoPass.html">XanadoPass</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-dawg_compressor.html">dawg/compressor</a></li><li><a href="module-dawg_explore.html">dawg/explore</a></li><li><a href="module-design_valett.html">design/valett</a></li><li><a href="module-game_findBestPlay.html">game/findBestPlay</a></li></ul><h3>Classes</h3><ul><li><a href="Board.html">Board</a></li><li><a href="BrowserPlatform.html">BrowserPlatform</a></li><li><a href="Database.html">Database</a></li><li><a href="Dialog.html">Dialog</a></li><li><a href="Dictionary.html">Dictionary</a></li><li><a href="Edition.html">Edition</a></li><li><a href="FileDatabase.html">FileDatabase</a></li><li><a href="Fridge.html">Fridge</a></li><li><a href="Game.html">Game</a></li><li><a href="I18N.html">I18N</a></li><li><a href="LetterBag.html">LetterBag</a></li><li><a href="Move.html">Move</a></li><li><a href="Platform.html">Platform</a></li><li><a href="Player.html">Player</a></li><li><a href="Rack.html">Rack</a></li><li><a href="Server.html">Server</a></li><li><a href="ServerPlatform.html">ServerPlatform</a></li><li><a href="Square.html">Square</a></li><li><a href="Surface.html">Surface</a></li><li><a href="Tile.html">Tile</a></li><li><a href="Trie.html">Trie</a></li><li><a href="TrieNode.html">TrieNode</a></li><li><a href="Turn.html">Turn</a></li><li><a href="Ui.html">Ui</a></li><li><a href="UserManager.html">UserManager</a></li><li><a href="XanadoPass.html">XanadoPass</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sun Mar 13 2022 07:58:10 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Mon Mar 21 2022 10:05:56 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

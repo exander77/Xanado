@@ -54,8 +54,8 @@ define('game/Player', [
 		 * it's a robot. If name is a Player object, ignored.
 		 */
 		constructor(name, key, isRobot) {
-			if (name instanceof Player) {
-				// Copying an existing player
+			if (typeof name === 'object') {
+				// Copying an existing Player or Player.simple
 				this.isRobot = name.isRobot;
 				this.key = name.key; // re-use
 				name = name.name;
@@ -113,19 +113,23 @@ define('game/Player', [
 		}
 
 		/**
-		 * Create simple structure describing a subset of the player
-		 * state, for sending to the 'games' interface
+		 * Create simple flat structure describing a subset of the player
+		 * state
 		 * @param {Game} game the game the player is participating in
-		 * @param {UserManager} um user manager for getting emails
+		 * @param {UserManager?} um user manager for getting emails if wanted
 		 * @return {Promise} resolving to a simple structure describing the player
 		 */
-		catalogue(game, um) {
-			return (this.isRobot ? Promise.resolve({}) : um.getUser({key: this.key}))
+		simple(game, um) {
+			return ((this.isRobot || !um)
+					? Promise.resolve(this)
+					: um.getUser({key: this.key}))
 			.then(ump => {
 				return {
-					name: this.name,
+					name: this.name || 'Unknown Player',
 					isRobot: this.isRobot,
-					connected: this.isRobot || (game.getConnection(this) !== null),
+					// Only in simple, has no analog in Player
+					connected: this.isRobot
+					|| (game.getConnection(this) !== null),
 					dictionary: this.dictionary,
 					key: this.key,
 					score: this.score,
@@ -134,10 +138,13 @@ define('game/Player', [
 				};
 			})
 			.catch(e => {
-				// User key not found in the db, for some reason. Not fatal.
+				// User key not found in the db. Not fatal, just pretend it's
+				// a robot.
 				return {
+					name: 'Unknown',
 					isRobot: this.isRobot,
-					connected: this.isRobot || (game.getConnection(this) !== null),
+					connected: this.isRobot
+					|| (game.getConnection(this) !== null),
 					key: this.key,
 					score: this.score,
 					secondsToPlay: this.secondsToPlay
@@ -278,8 +285,8 @@ define('game/Player', [
 		/**
 		 * Create score table representation of the player on the browser
 		 * side only. This is intended to work both on a full Player
-		 * object, but also on a Player.catalogue of the player.
-		 * @param {Player} player the player (or player.catalogue) who's
+		 * object, but also on a Player.simple of the player.
+		 * @param {Player|object} player the player (or Player.simple) who's
 		 * row this is
 		 * @param {string} curKey the key of the player for whom the DOM is
 		 * being generated
@@ -292,7 +299,7 @@ define('game/Player', [
 			$icon.addClass(this.isRobot ? "icon-robot" : "icon-person");
 			$tr.append($("&lt;td>&lt;/td>").append($icon));
 			const who = this.key === curKey
-				? Platform.i18n('You')
+				? Platform.i18n("You")
 				: this.name;
 			$tr.append(`&lt;td class='name'>${who}&lt;/td>`);
 			$tr.append('&lt;td class="remaining-tiles">&lt;/td>');
@@ -303,9 +310,9 @@ define('game/Player', [
 			 * @private
 			 * @member {jQuery}
 			 */
-			this.$status = $(`&lt;td class='connect-state'>${BLACK_CIRCLE}&lt;/td>`);
-			$tr.append(this.$status);
-			this.$status.addClass(this.connected ? "online" : "offline");
+			const $status = $(`&lt;td class='connect-state'>${BLACK_CIRCLE}&lt;/td>`);
+			$tr.append($status);
+			$status.addClass(this.connected ? "online" : "offline");
 			
 			/**
 			 * Jquery object that contains this player's score on
@@ -332,10 +339,11 @@ define('game/Player', [
 		 * @param {boolean} tf true/false
 		 */
 		online(tf) {
-			if (tf)
-				this.$status.removeClass('offline').addClass('online');
-			else
-				this.$status.removeClass('online').addClass('offline');
+			let rem = tf ? 'offline' : 'online';
+			let add = tf ? 'online' : 'offline';
+			$(`#player${this.key} .connect-state`)
+			.removeClass(rem)
+			.addClass(add);
 		}
 	}
 
@@ -351,13 +359,13 @@ define('game/Player', [
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-dawg_compressor.html">dawg/compressor</a></li><li><a href="module-dawg_explore.html">dawg/explore</a></li><li><a href="module-design_valett.html">design/valett</a></li><li><a href="module-game_findBestPlay.html">game/findBestPlay</a></li><li><a href="module-i18n_checkTranslation.html">i18n/checkTranslation</a></li></ul><h3>Classes</h3><ul><li><a href="Board.html">Board</a></li><li><a href="BrowserPlatform.html">BrowserPlatform</a></li><li><a href="Database.html">Database</a></li><li><a href="Dialog.html">Dialog</a></li><li><a href="Dictionary.html">Dictionary</a></li><li><a href="Edition.html">Edition</a></li><li><a href="FileDatabase.html">FileDatabase</a></li><li><a href="Fridge.html">Fridge</a></li><li><a href="Game.html">Game</a></li><li><a href="I18N.html">I18N</a></li><li><a href="LetterBag.html">LetterBag</a></li><li><a href="Move.html">Move</a></li><li><a href="Platform.html">Platform</a></li><li><a href="Player.html">Player</a></li><li><a href="Rack.html">Rack</a></li><li><a href="Server.html">Server</a></li><li><a href="ServerPlatform.html">ServerPlatform</a></li><li><a href="Square.html">Square</a></li><li><a href="Surface.html">Surface</a></li><li><a href="Tile.html">Tile</a></li><li><a href="Trie.html">Trie</a></li><li><a href="TrieNode.html">TrieNode</a></li><li><a href="Turn.html">Turn</a></li><li><a href="Ui.html">Ui</a></li><li><a href="UserManager.html">UserManager</a></li><li><a href="XanadoPass.html">XanadoPass</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-dawg_compressor.html">dawg/compressor</a></li><li><a href="module-dawg_explore.html">dawg/explore</a></li><li><a href="module-design_valett.html">design/valett</a></li><li><a href="module-game_findBestPlay.html">game/findBestPlay</a></li></ul><h3>Classes</h3><ul><li><a href="Board.html">Board</a></li><li><a href="BrowserPlatform.html">BrowserPlatform</a></li><li><a href="Database.html">Database</a></li><li><a href="Dialog.html">Dialog</a></li><li><a href="Dictionary.html">Dictionary</a></li><li><a href="Edition.html">Edition</a></li><li><a href="FileDatabase.html">FileDatabase</a></li><li><a href="Fridge.html">Fridge</a></li><li><a href="Game.html">Game</a></li><li><a href="I18N.html">I18N</a></li><li><a href="LetterBag.html">LetterBag</a></li><li><a href="Move.html">Move</a></li><li><a href="Platform.html">Platform</a></li><li><a href="Player.html">Player</a></li><li><a href="Rack.html">Rack</a></li><li><a href="Server.html">Server</a></li><li><a href="ServerPlatform.html">ServerPlatform</a></li><li><a href="Square.html">Square</a></li><li><a href="Surface.html">Surface</a></li><li><a href="Tile.html">Tile</a></li><li><a href="Trie.html">Trie</a></li><li><a href="TrieNode.html">TrieNode</a></li><li><a href="Turn.html">Turn</a></li><li><a href="Ui.html">Ui</a></li><li><a href="UserManager.html">UserManager</a></li><li><a href="XanadoPass.html">XanadoPass</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sun Mar 13 2022 07:58:10 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Mon Mar 21 2022 10:05:56 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>
