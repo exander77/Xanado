@@ -764,7 +764,7 @@ they used</p>
     
 
     
-    <h4 class="name" id="createScoreDOM"><span class="type-signature"></span>createScoreDOM<span class="signature">(player, curKey)</span><span class="type-signature"> &rarr; {jQuery}</span></h4>
+    <h4 class="name" id="createScoreDOM"><span class="type-signature"></span>createScoreDOM<span class="signature">(curKey, showConnect)</span><span class="type-signature"> &rarr; {jQuery}</span></h4>
     
 
     
@@ -810,33 +810,6 @@ object, but also on a Player.simple of the player.</p>
 
         <tr>
             
-                <td class="name"><code>player</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type"><a href="Player.html">Player</a></span>
-|
-
-<span class="param-type">object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>the player (or Player.simple) who's
-row this is</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
                 <td class="name"><code>curKey</code></td>
             
 
@@ -858,153 +831,16 @@ being generated</p></td>
         </tr>
 
     
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line267">line 267</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    <p>DOM object for the score table</p>
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">jQuery</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="emailInvitation"><span class="type-signature"></span>emailInvitation<span class="signature">(subject, gameURL, config, um, senderKey)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    <p>Promise to send an email invitation to a player on
-the server side only.</p>
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
 
         <tr>
             
-                <td class="name"><code>subject</code></td>
+                <td class="name"><code>showConnect</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">string</span>
+<span class="param-type">boolean</span>
 
 
             
@@ -1014,100 +850,7 @@ the server side only.</p>
 
             
 
-            <td class="description last"><p>the subject of the mail</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>gameURL</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>the URL of the game</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>config</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>the global config object</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>um</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type"><a href="UserManager.html">UserManager</a></span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>user manager for getting emails</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>senderKey</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>user key  for the sender, will default to
-( config.email.sender if undefined</p></td>
+            <td class="description last"><p>show the connection status of the player</p></td>
         </tr>
 
     
@@ -1177,7 +920,7 @@ the server side only.</p>
 
         
 <div class="param-desc">
-    <p>Promise that resolves to the player's name</p>
+    <p>DOM object for the score table</p>
 </div>
 
 
@@ -1188,7 +931,7 @@ the server side only.</p>
     </dt>
     <dd>
         
-<span class="param-type">Promise</span>
+<span class="param-type">jQuery</span>
 
 
     </dd>
@@ -1330,7 +1073,7 @@ the server side only.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line132">line 132</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line134">line 134</a>
     </li></ul></dd>
     
 
@@ -1468,7 +1211,7 @@ side only.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line313">line 313</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line264">line 264</a>
     </li></ul></dd>
     
 
@@ -1557,7 +1300,7 @@ side only.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line304">line 304</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line255">line 255</a>
     </li></ul></dd>
     
 
@@ -1645,7 +1388,7 @@ side only.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line143">line 143</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line145">line 145</a>
     </li></ul></dd>
     
 
@@ -2011,7 +1754,7 @@ timer expires</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line156">line 156</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line158">line 158</a>
     </li></ul></dd>
     
 
@@ -2099,7 +1842,7 @@ timer expires</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line189">line 189</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line191">line 191</a>
     </li></ul></dd>
     
 
@@ -2187,7 +1930,7 @@ timer expires</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line213">line 213</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line215">line 215</a>
     </li></ul></dd>
     
 
@@ -2275,7 +2018,7 @@ timer expires</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line201">line 201</a>
+        <a href="game_Player.js.html">game/Player.js</a>, <a href="game_Player.js.html#line203">line 203</a>
     </li></ul></dd>
     
 
@@ -2327,7 +2070,7 @@ timer expires</p></td>
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu Mar 24 2022 18:08:01 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sat Mar 26 2022 10:13:01 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>
