@@ -77,6 +77,31 @@ define('browser/Ui', [
 	}
 
 	/**
+	 * Format a move score summary.
+	 * @param turn {Move|Turn} the turn or move being scored
+	 * @param {boolean} hideScore true to elide the score
+	 */
+	function formatScore(turn, hideScore) {
+		let sum = 0;
+		const $span = $('&lt;span>&lt;/span>');
+		for (let word of turn.words) {
+			$span
+			.append(` &lt;span class="word">${word.word}&lt;/span>`);
+			if (!hideScore) {
+				$span
+				.append(` (&lt;span class="word-score">${word.score}&lt;/span>)`);
+			}
+			sum += word.score;
+		}
+		// .score will always be a number after a move
+		if (!hideScore &amp;&amp; turn.words.length > 1 || turn.score > sum) {
+			$span
+			.append(` ${$.i18n("total")} ${turn.score}`);
+		}
+		return $span;
+	}
+
+	/**
 	 * User interface to a game in a browser. The Ui reflects the game state as
 	 * communicated from the server, through the exchange of various messages.
 	 */
@@ -154,7 +179,7 @@ define('browser/Ui', [
 				console.debug(`--> Game ${gameKey}`);
 				const game = Fridge.thaw(frozen, Game.classes);
 				return this.identifyPlayer(game)
-				.then (playerKey => this.loadGame(game, playerKey))
+				.then (playerKey => this.loadGame(game))
 				.then(() => this.attachSocketListeners());
 			})
 			.catch(report);
@@ -254,43 +279,27 @@ define('browser/Ui', [
 			this.log($.i18n('ui-log-turn-player', player.name), 'turn-player');
 
 			// What did they do?
-			const $turnDetail = $('&lt;div class="turn-detail">&lt;/div>');
+			let turnText;
 			switch (turn.type) {
 			case 'move':
-				{
-					// Compose a description of the words created
-					let ws = 0;
-					let sum = 0;
-					for (let word of turn.words) {
-						$turnDetail
-						.append(`&lt;span class="word">${word.word}&lt;/span>`)
-						.append(' (')
-						.append(`&lt;span class="word-score">${word.score}&lt;/span>`)
-						.append(') ');
-						ws++;
-						sum += word.score;
-					}
-					// deltaScore will always be a number after a move
-					if (ws > 1 || turn.deltaScore > sum)
-						$turnDetail.append($.i18n('ui-log-total', turn.deltaScore));
-				}
+				turnText = formatScore(turn, false);
 				break;
 			case 'swap':
-				$turnDetail.append($.i18n('ui-log-swap', turn.replacements.length));
+				turnText = $.i18n('ui-log-swap', turn.replacements.length);
 				break;
 			case /*i18n ui-log-*/'timeout':
 			case /*i18n ui-log-*/'pass':
 			case /*i18n ui-log-*/'challenge-won':
 			case /*i18n ui-log-*/'challenge-failed':
 			case /*i18n ui-log-*/'took-back':
-				$turnDetail.append($.i18n(`ui-log-${turn.type}`));
+				turnText = $.i18n(`ui-log-${turn.type}`);
 			case 'Game over':
 				break;
 			default:
 				// Terminal, no point in translating
 				throw Error(`Unknown move type ${turn.type}`);
 			}
-			this.log($turnDetail, 'turn-detail');
+			this.log(turnText, 'turn-detail');
 
 			if (latestTurn
 				&amp;&amp; typeof turn.emptyPlayer === 'number'
@@ -651,7 +660,8 @@ define('browser/Ui', [
 			return $.get("/session")
 			.then(session => {
 				console.debug("Signed in as", session.name);
-				if (game.players.find(p => p.key === session.key)) {
+				this.player = game.players.find(p => p.key === session.key);
+				if (this.player) {
 					$(".logged-in")
 					.show()
 					.find("#whoami")
@@ -671,6 +681,7 @@ define('browser/Ui', [
 			})
 			.catch(e => {
 				console.debug(e);
+				this.player = undefined;
 				$(".not-logged-in")
 				.show()
 				.find("button")
@@ -685,11 +696,9 @@ define('browser/Ui', [
 		/**
 		 * A game has been read; load it into the UI
 		 * @param {Game} game the Game being played
-		 * @param {string?} playerKey player key, if player is in this game
-		 * undefined if not
 		 * @return {Promise} Promise that resolves to a game
 		 */
-		loadGame(game, playerKey) {
+		loadGame(game) {
 			console.debug('Loading UI for', game.toString());
 
 			this.game = game;
@@ -700,7 +709,6 @@ define('browser/Ui', [
 			// Can swap up to swapCount tiles
 			this.swapRack = new Rack(this.game.board.swapCount);
 
-			this.player = this.game.getPlayer(playerKey);
 			this.updatePlayerTable();
 
 			if (this.player) {
@@ -959,7 +967,7 @@ define('browser/Ui', [
 				ui.socket.emit(
 					'message',
 					{
-						sender: ui.player.name,
+						sender: ui.player ? ui.player.name : "Observer",
 						text: $(this).val()
 					});
 				$(this).val('');
@@ -1294,15 +1302,7 @@ define('browser/Ui', [
 					$move.append($.i18n(move));
 					this.enableTurnButton(false);
 				} else {
-					for (const word of move.words) {
-						$move
-						.append(`&lt;span class="word">${word.word}&lt;/span>`)
-						.append(' (')
-						.append(`&lt;span class="word-score">${word.score}&lt;/span>`)
-						.append(') ');
-					}
-					const total = $.i18n('ui-log-total', move.score);
-					$move.append(`&lt;span class="totalScore">${total}&lt;/span>`);
+					$move.append(formatScore(move, !this.game.predictScore));
 					this.enableTurnButton(true);
 				}
 
@@ -1364,12 +1364,12 @@ define('browser/Ui', [
 			this.scrollLogToEnd(300);
             this.removeMoveActionButtons();
 			const player = this.game.getPlayer(turn.playerKey);
-			if (typeof turn.deltaScore === 'number')
-				player.score += turn.deltaScore;
-			else if (typeof turn.deltaScore === 'object')
-				Object.keys(turn.deltaScore).forEach(
+			if (typeof turn.score === 'number')
+				player.score += turn.score;
+			else if (typeof turn.score === 'object')
+				Object.keys(turn.score).forEach(
 					k => this.game.players
-					.find(p => p.key === k).score += turn.deltaScore[k]);
+					.find(p => p.key === k).score += turn.score[k]);
 
 			player.refreshDOM();
 
@@ -1672,11 +1672,13 @@ define('browser/Ui', [
 		 */
 		setMoveAction(action) {
 			console.debug("setMoveAction", action);
-			$('#turnButton')
-			.data('action', action)
-			.empty()
-			.append($.i18n(`ui-${action}`))
-			.show();
+			if (this.player) {
+				$('#turnButton')
+				.data('action', action)
+				.empty()
+				.append($.i18n(`ui-${action}`))
+				.show();
+			}
 		}
 
 		/**
@@ -1830,7 +1832,7 @@ define('browser/Ui', [
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sat Mar 26 2022 10:13:01 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu Mar 31 2022 14:11:25 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>
