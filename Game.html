@@ -28,7 +28,7 @@
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>Game<span class="signature">(edition, dictionary<span class="signature-attributes">nullable</span>)</span><span class="type-signature"></span></h2>
+        <h2><span class="attribs"><span class="type-signature"></span></span>Game<span class="signature">(params)</span><span class="type-signature"></span></h2>
         
             <div class="class-description"><p>The Game object may be used server or browser side.</p></div>
         
@@ -45,7 +45,7 @@
     
 
     
-    <h4 class="name" id="Game"><span class="type-signature"></span>new Game<span class="signature">(edition, dictionary<span class="signature-attributes">nullable</span>)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="Game"><span class="type-signature"></span>new Game<span class="signature">(params)</span><span class="type-signature"></span></h4>
     
 
     
@@ -59,6 +59,7 @@
 <p>A game identified by key is loaded from a db by</p>
 <pre class="prettyprint source"><code>db.get(key, Game.classes).then(game => { game.onLoad(db)...
 </code></pre>
+<p>(may be null)</p>
 </div>
 
 
@@ -71,6 +72,50 @@
 
     <h5>Parameters:</h5>
     
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>params</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Parameter object. This can be another
+Game to copy game parameters, the result from Game.simple(),
+or a generic object with these fields.</p>
+                <h6>Properties</h6>
+                
 
 <table class="params">
     <thead>
@@ -120,7 +165,7 @@
 
             
 
-            <td class="description last"><p>edition <em>name</em></p></td>
+            <td class="description last"><p>edition <em>name</em>, required</p></td>
         </tr>
 
     
@@ -153,8 +198,246 @@
 
             
 
-            <td class="description last"><p>dictionary <em>name</em> (may be null)
-(may be null)</p></td>
+            <td class="description last"><p><em>name</em> (may be null)</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>secondsToPlay</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+                    &lt;nullable><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>seconds allowed for plays</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>minutesToPlay</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+                    &lt;nullable><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>used if secondsToPlay
+not given</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>predictScore</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">boolean</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+                    &lt;nullable><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>default true</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>allowTakeBack</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">boolean</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+                    &lt;nullable><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>default false</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>checkDictionary</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">boolean</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+                    &lt;nullable><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>default false</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>minPlayers</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+                    &lt;nullable><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>maxPlayers</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+                    &lt;nullable><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
         </tr>
 
     
@@ -195,7 +478,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line22">line 22</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line42">line 42</a>
     </li></ul></dd>
     
 
@@ -242,6 +525,80 @@
 
     
         <h3 class="subsection-title">Members</h3>
+
+        
+            
+<h4 class="name" id="allowTakeBack"><span class="type-signature"></span>allowTakeBack<span class="type-signature"> :boolean</span></h4>
+
+
+
+
+<div class="description">
+    <p>Whether or not to allow players to take back their most recent
+move without penalty, so long as the next player hasn't
+challenged or played.</p>
+</div>
+
+
+
+    <h5>Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">boolean</span>
+
+
+        </li>
+    </ul>
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line198">line 198</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
 
         
             
@@ -299,7 +656,80 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line104">line 104</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line141">line 141</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id="checkDictionary"><span class="type-signature"></span>checkDictionary<span class="type-signature"> :boolean</span></h4>
+
+
+
+
+<div class="description">
+    <p>Whether or not to check the dictionary to report on the
+validity of the just player move.</p>
+</div>
+
+
+
+    <h5>Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">boolean</span>
+
+
+        </li>
+    </ul>
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line205">line 205</a>
     </li></ul></dd>
     
 
@@ -373,7 +803,7 @@ keep the name of the relevant object.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line65">line 65</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line99">line 99</a>
     </li></ul></dd>
     
 
@@ -397,7 +827,7 @@ keep the name of the relevant object.</p>
 
 
 <div class="description">
-    <p>The name of the ediiton.
+    <p>The name of the edition.
 We don't keep a pointer to the Edition object so we can
 cheaply serialise and send to the games interface.</p>
 </div>
@@ -447,7 +877,7 @@ cheaply serialise and send to the games interface.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line57">line 57</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line89">line 89</a>
     </li></ul></dd>
     
 
@@ -519,7 +949,7 @@ cheaply serialise and send to the games interface.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line42">line 42</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line74">line 74</a>
     </li></ul></dd>
     
 
@@ -591,7 +1021,7 @@ cheaply serialise and send to the games interface.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line117">line 117</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line154">line 154</a>
     </li></ul></dd>
     
 
@@ -663,7 +1093,7 @@ cheaply serialise and send to the games interface.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line136">line 136</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line173">line 173</a>
     </li></ul></dd>
     
 
@@ -736,7 +1166,7 @@ can start. Must be at least 2.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line130">line 130</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line167">line 167</a>
     </li></ul></dd>
     
 
@@ -809,7 +1239,7 @@ continuation game</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line143">line 143</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line182">line 182</a>
     </li></ul></dd>
     
 
@@ -881,7 +1311,7 @@ continuation game</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line123">line 123</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line160">line 160</a>
     </li></ul></dd>
     
 
@@ -955,7 +1385,7 @@ play, true otherwise.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line151">line 151</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line190">line 190</a>
     </li></ul></dd>
     
 
@@ -1028,7 +1458,7 @@ cached because we don't hold a pointer to the Edition</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line111">line 111</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line148">line 148</a>
     </li></ul></dd>
     
 
@@ -1101,7 +1531,7 @@ Default 0 means never time out.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line98">line 98</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line134">line 134</a>
     </li></ul></dd>
     
 
@@ -1173,7 +1603,7 @@ Default 0 means never time out.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line71">line 71</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line107">line 107</a>
     </li></ul></dd>
     
 
@@ -1246,7 +1676,7 @@ List of Turn objects.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line85">line 85</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line121">line 121</a>
     </li></ul></dd>
     
 
@@ -1318,7 +1748,7 @@ List of Turn objects.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line91">line 91</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line127">line 127</a>
     </li></ul></dd>
     
 
@@ -1447,7 +1877,7 @@ List of Turn objects.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line204">line 204</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line258">line 258</a>
     </li></ul></dd>
     
 
@@ -1608,7 +2038,7 @@ able to make.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line855">line 855</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line916">line 916</a>
     </li></ul></dd>
     
 
@@ -1718,7 +2148,7 @@ able to make.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1284">line 1284</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1345">line 1345</a>
     </li></ul></dd>
     
 
@@ -1828,7 +2258,7 @@ able to make.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line360">line 360</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line414">line 414</a>
     </li></ul></dd>
     
 
@@ -1938,7 +2368,7 @@ able to make.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line995">line 995</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1056">line 1056</a>
     </li></ul></dd>
     
 
@@ -2049,7 +2479,7 @@ Check the words created by the previous move are in the dictionary</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1190">line 1190</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1251">line 1251</a>
     </li></ul></dd>
     
 
@@ -2160,7 +2590,7 @@ Stops timers and sets the state of the game if it has.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line520">line 520</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line578">line 578</a>
     </li></ul></dd>
     
 
@@ -2323,7 +2753,7 @@ challenge failed.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1053">line 1053</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1114">line 1114</a>
     </li></ul></dd>
     
 
@@ -2506,7 +2936,7 @@ challenge failed.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line624">line 624</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line685">line 685</a>
     </li></ul></dd>
     
 
@@ -2597,7 +3027,7 @@ a Promise.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line161">line 161</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line215">line 215</a>
     </li></ul></dd>
     
 
@@ -2757,7 +3187,7 @@ being generated</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1336">line 1336</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1396">line 1396</a>
     </li></ul></dd>
     
 
@@ -2896,7 +3326,7 @@ save state and notify game listeners.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line468">line 468</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line526">line 526</a>
     </li></ul></dd>
     
 
@@ -3056,7 +3486,7 @@ and players have been notified.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line542">line 542</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line600">line 600</a>
     </li></ul></dd>
     
 
@@ -3166,7 +3596,7 @@ and players have been notified.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line311">line 311</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line365">line 365</a>
     </li></ul></dd>
     
 
@@ -3276,7 +3706,7 @@ and players have been notified.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line303">line 303</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line357">line 357</a>
     </li></ul></dd>
     
 
@@ -3436,7 +3866,7 @@ return the current player</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line235">line 235</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line289">line 289</a>
     </li></ul></dd>
     
 
@@ -3595,7 +4025,7 @@ return the current player</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line284">line 284</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line338">line 338</a>
     </li></ul></dd>
     
 
@@ -3705,7 +4135,7 @@ return the current player</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line332">line 332</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line386">line 386</a>
     </li></ul></dd>
     
 
@@ -3815,7 +4245,7 @@ return the current player</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line340">line 340</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line394">line 394</a>
     </li></ul></dd>
     
 
@@ -3903,7 +4333,7 @@ return the current player</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line387">line 387</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line445">line 445</a>
     </li></ul></dd>
     
 
@@ -4042,7 +4472,7 @@ notify all players that they requested a hint.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line779">line 779</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line840">line 840</a>
     </li></ul></dd>
     
 
@@ -4131,7 +4561,7 @@ is either the last time a turn was processed, or the creation time.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line349">line 349</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line403">line 403</a>
     </li></ul></dd>
     
 
@@ -4285,7 +4715,7 @@ is either the last time a turn was processed, or the creation time.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line293">line 293</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line347">line 347</a>
     </li></ul></dd>
     
 
@@ -4444,7 +4874,7 @@ is either the last time a turn was processed, or the creation time.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line897">line 897</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line958">line 958</a>
     </li></ul></dd>
     
 
@@ -4608,7 +5038,7 @@ of the player to get the next player to</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line268">line 268</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line322">line 322</a>
     </li></ul></dd>
     
 
@@ -4814,7 +5244,7 @@ may be connected multiple times through different sockets.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line436">line 436</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line494">line 494</a>
     </li></ul></dd>
     
 
@@ -4975,7 +5405,7 @@ may be connected multiple times, through different sockets.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line455">line 455</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line513">line 513</a>
     </li></ul></dd>
     
 
@@ -5115,7 +5545,7 @@ reset.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line182">line 182</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line236">line 236</a>
     </li></ul></dd>
     
 
@@ -5276,7 +5706,7 @@ can't play, or challenged and failed.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1165">line 1165</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1226">line 1226</a>
     </li></ul></dd>
     
 
@@ -5386,7 +5816,7 @@ can't play, or challenged and failed.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line396">line 396</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line454">line 454</a>
     </li></ul></dd>
     
 
@@ -5550,7 +5980,7 @@ the player to get the previous player of</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line247">line 247</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line301">line 301</a>
     </li></ul></dd>
     
 
@@ -5710,7 +6140,7 @@ the bag</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line220">line 220</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line274">line 274</a>
     </li></ul></dd>
     
 
@@ -5799,7 +6229,7 @@ stopTimers()</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line755">line 755</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line816">line 816</a>
     </li></ul></dd>
     
 
@@ -5887,7 +6317,7 @@ stopTimers()</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line377">line 377</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line435">line 435</a>
     </li></ul></dd>
     
 
@@ -6048,7 +6478,7 @@ works on server side</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line593">line 593</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line651">line 651</a>
     </li></ul></dd>
     
 
@@ -6231,7 +6661,7 @@ the Game.secondsPerPlay</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line574">line 574</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line632">line 632</a>
     </li></ul></dd>
     
 
@@ -6319,7 +6749,7 @@ the Game.secondsPerPlay</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line745">line 745</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line806">line 806</a>
     </li></ul></dd>
     
 
@@ -6458,7 +6888,7 @@ letters.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1230">line 1230</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1291">line 1291</a>
     </li></ul></dd>
     
 
@@ -6619,7 +7049,7 @@ or 'challenge-won'</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1103">line 1103</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1164">line 1164</a>
     </li></ul></dd>
     
 
@@ -6778,7 +7208,7 @@ or 'challenge-won'</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line829">line 829</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line890">line 890</a>
     </li></ul></dd>
     
 
@@ -6915,7 +7345,7 @@ or 'challenge-won'</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1024">line 1024</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line1085">line 1085</a>
     </li></ul></dd>
     
 
@@ -7025,7 +7455,7 @@ or 'challenge-won'</p></td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line368">line 368</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line422">line 422</a>
     </li></ul></dd>
     
 
@@ -7136,7 +7566,7 @@ as identified by their key.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line556">line 556</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line614">line 614</a>
     </li></ul></dd>
     
 
@@ -7224,7 +7654,7 @@ as identified by their key.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line323">line 323</a>
+        <a href="game_Game.js.html">game/Game.js</a>, <a href="game_Game.js.html#line377">line 377</a>
     </li></ul></dd>
     
 
@@ -7298,7 +7728,7 @@ as identified by their key.</p>
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Fri Apr 15 2022 14:18:38 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sat Apr 16 2022 09:17:45 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>
