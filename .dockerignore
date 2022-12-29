@@ -19,3 +19,7 @@ sessions
 node_modules
 https.*
 config*.json
+data
+dictionaries
+dictionaries.source
+_

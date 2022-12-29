@@ -7,3 +7,4 @@ COPY ["package.json", "package-lock.json*", "./"]
 RUN npm install --production
 COPY . .
 EXPOSE 9093
+CMD [ "node", "bin/server.js", "-c", "data/config.json" ]
