@@ -239,15 +239,6 @@ const ClientUIMixin = superclass => class extends superclass {
       console.debug(`--> disconnect`);
       const mess = $.i18n("text-disconnected");
       $reconnectDialog = this.alert(mess, $.i18n("Server disconnected"));
-      setTimeout(() => {
-        // Try and rejoin after a 3s timeout
-        this.readyToListen()
-        .catch(e => {
-          console.debug(e);
-          if (!$reconnectDialog)
-            this.alert(e, $.i18n("Reconnect failed"));
-        });
-      }, 3000);
     });
 
     super.attachChannelHandlers();

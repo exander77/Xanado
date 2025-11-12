@@ -392,12 +392,16 @@ class Game {
       this.penaltyPoints = params.penaltyPoints || Game.DEFAULTS.penaltyPoints;
     }
 
-    if (params.wordCheck && params.wordCheck !== "none") {
+    const configuredWordCheck =
+      typeof params.wordCheck === "undefined"
+        ? Game.DEFAULTS.wordCheck
+        : params.wordCheck;
+    if (configuredWordCheck && configuredWordCheck !== "none") {
       /**
        * Whether or not to check plays against the dictionary.
        * @member {WordCheck?}
        */
-      this.wordCheck = params.wordCheck;
+      this.wordCheck = configuredWordCheck;
     }
 
     if (params.minPlayers > 2) {
@@ -1605,6 +1609,13 @@ class Game {
         this._debug("\tconnected non-player");
     }
 
+    const previousPlayerKey = channel.player ? channel.player.key : undefined;
+    const newPlayerKey = player ? player.key : undefined;
+    const channelAlreadyTracked =
+      Array.isArray(this._channels)
+        ? this._channels.includes(channel)
+        : false;
+
     // Player is connected. Decorate the channel. It may seem
     // rather cavalier writing over what might be a socket this
     // way, but it does simplify the code quite a bit.
@@ -1613,27 +1624,31 @@ class Game {
 
     if (!this._channels)
       this._channels = [];
-    this._channels.push(channel);
+    if (!channelAlreadyTracked) {
+      this._channels.push(channel);
+      // Add disconnect listener
+      /* c8 ignore next */
+      channel.on("disconnect", () => {
+        if (channel.player) {
+          channel.player._isConnected = false;
+          /* c8 ignore next 2 */
+          if (this._debug)
+            this._debug(channel.player.name, "disconnected");
+        } else {
+          /* c8 ignore next 2 */
+          if (this._debug)
+            this._debug("non-player disconnected");
+        }
+        const idx = this._channels.indexOf(channel);
+        if (idx >= 0)
+          this._channels.splice(idx, 1);
+        this.sendCONNECTIONS();
+      });
+    }
 
-    // Tell players that the player is connected
-    this.sendCONNECTIONS();
-
-    // Add disconnect listener
-    /* c8 ignore next */
-    channel.on("disconnect", () => {
-      if (channel.player) {
-        channel.player._isConnected = false;
-        /* c8 ignore next 2 */
-        if (this._debug)
-          this._debug(channel.player.name, "disconnected");
-      } else {
-        /* c8 ignore next 2 */
-        if (this._debug)
-          this._debug("non-player disconnected");
-      }
-      this._channels.splice(this._channels.indexOf(channel), 1);
+    // Tell players if the channel is new or the player identity changed
+    if (!channelAlreadyTracked || previousPlayerKey !== newPlayerKey)
       this.sendCONNECTIONS();
-    });
 
     return this.playIfReady();
   }

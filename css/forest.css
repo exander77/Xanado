@@ -1,0 +1,57 @@
+/*Copyright (C) 2019-2024 The Xanado Project
+  License MIT. Forest greens and earth tones */
+
+.Surface .underlay:before {
+  content: attr(data-short);
+}
+
+.Surface td {
+  border-color: #6f7c4c;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #5c8a3d;
+  border-color: #3c5c24;
+  color: #f5ffeb;
+}
+
+.Surface td.square-T {
+  background-color: #8f2d2a;
+  border-color: #621616;
+  color: #ffeaea;
+}
+
+.Surface td.square-Q {
+  background-color: #4e3f75;
+  border-color: #2f1f4d;
+  color: #f2e9ff;
+}
+
+.Surface td.square-d {
+  background-color: #8fbf75;
+  border-color: #5c8a3d;
+  color: #1f2a15;
+}
+
+.Surface td.square-t {
+  background-color: #c9a66b;
+  border-color: #8c6f3b;
+  color: #302413;
+}
+
+.Surface td.square-q {
+  background-color: #3a6156;
+  border-color: #1f3a32;
+  color: #e5fff9;
+}
+
+.Surface td.square-_ {
+  background-color: #e6e0cf;
+}
+
+.Tile {
+  background-color: #f4e3c1 !important;
+  border-color: #b38c52 !important;
+  color: #3b2a10 !important;
+}

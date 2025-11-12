@@ -1,0 +1,59 @@
+/*Copyright (C) 2019-2024 The Xanado Project https://github.com/cdot/Xanado
+  License MIT. See README.md for details. Author Codex AI */
+
+/* Aurora: cool teal/purple palette */
+
+.Surface .underlay:before {
+  content: attr(data-short);
+}
+
+.Surface td {
+  border-color: #8fbcd4;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #33b5e5;
+  border-color: #0081a7;
+  color: #ffffff;
+}
+
+.Surface td.square-T {
+  background-color: #7c3aed;
+  border-color: #4c1d95;
+  color: #ffffff;
+}
+
+.Surface td.square-Q {
+  background-color: #ec4899;
+  border-color: #be185d;
+  color: #ffffff;
+}
+
+.Surface td.square-d {
+  background-color: #0ea5e9;
+  border-color: #0369a1;
+  color: #ffffff;
+}
+
+.Surface td.square-t {
+  background-color: #f59e0b;
+  border-color: #b45309;
+  color: #2f1b06;
+}
+
+.Surface td.square-q {
+  background-color: #14b8a6;
+  border-color: #04706d;
+  color: #ffffff;
+}
+
+.Surface td.square-_ {
+  background-color: #e0f2ff;
+}
+
+.Tile {
+  background-color: #fef3c7 !important;
+  border-color: #f59e0b !important;
+  color: #5c3809 !important;
+}

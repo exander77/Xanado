@@ -132,8 +132,8 @@ const GameUIMixin = superclass => class extends superclass {
   /* c8 ignore stop */
 
   /**
-   * Append to the log pane. Messages are wrapped in a div, which
-   * may have the optional css class.
+   * Prepend to the log pane so the newest entries appear first.
+   * Messages are wrapped in a div, which may have the optional css class.
    * @memberof browser/GameUIMixin
    * @instance
    * @param {boolean} interactive false if we are replaying messages into
@@ -144,17 +144,26 @@ const GameUIMixin = superclass => class extends superclass {
    * @private
    */
   $log(interactive, mess, css) {
+    if (typeof interactive !== "boolean") {
+      css = mess;
+      mess = interactive;
+      interactive = false;
+    }
+
+    if (typeof mess === "undefined" || mess === null)
+      return undefined;
+
     const $div = $(document.createElement("div"))
           .addClass("message");
     if (css)
       $div.addClass(css);
     $div.append(mess);
     const $lm = $("#logBlock > .messages");
-    $lm.append($div);
+    $lm.prepend($div);
     if (interactive)
-      $lm.animate({
-        scrollTop: $("#logBlock > .messages").prop("scrollHeight")
-      }, 300);
+      $lm.stop(true).animate({
+        scrollTop: 0
+      }, 200);
     return $div;
   }
 
@@ -631,7 +640,17 @@ const GameUIMixin = superclass => class extends superclass {
    * @private
    */
   onKeyDown(event) {
-    if (event.target.id !== "body")
+    const target = event.target;
+    const isEditable =
+      target.isContentEditable
+      || /^(INPUT|TEXTAREA|SELECT)$/i.test(target.tagName);
+
+    if (event.key === ";" && target.id !== "chatInput" && !isEditable) {
+      $("#chatInput").focus();
+      return false;
+    }
+
+    if (target.id !== "body")
       return true;
 
     // Only handle events targeted when the board is not
@@ -728,10 +747,6 @@ const GameUIMixin = superclass => class extends superclass {
       if (this.boardLocked)
         return true;
       this.rotateTypingCursor();
-      return false;
-
-    case ";": // Chat
-      $('#chatInput').focus();
       return false;
 
     case "Shift": case "Control": case "Alt":
@@ -891,7 +906,7 @@ const GameUIMixin = superclass => class extends superclass {
       (turn, isLast) => this.$log(
         false, this.game.describeTurn(turn, this.player, isLast)));
 
-    this.$log(true, ""); // Force scroll to end of log
+    $("#logBlock > .messages").scrollTop(0);
 
     if (game.turns.length > 0)
       $("#undoButton").toggle(this.game.allowUndo ? true : false);
@@ -1068,9 +1083,25 @@ const GameUIMixin = superclass => class extends superclass {
     const landscape = ww > wh;
     // Constrain board to 90% of screen height in landscape, and the
     // full screen width in portrait capped at 90% of the screen height
-    const available = landscape ? (wh * 0.9) : Math.min(ww, wh * 0.9);
+    let available = landscape ? (wh * 0.9) : Math.min(ww, wh * 0.9);
+
+    if (landscape) {
+      const rackHeight = $("#playRack").outerHeight(true) || 0;
+      const reserved = rackHeight + 140; // leave headroom for rack + controls
+      const heightLimit = wh - reserved;
+      if (heightLimit > 0)
+        available = Math.min(available, heightLimit);
+    }
+
+    const widthLimit = Math.max(ww - 24, 80);
+    available = Math.min(available, widthLimit);
+    if (available <= 0 || !Number.isFinite(available))
+      available = Math.min(ww, wh) * 0.8;
+
     // A .Surface td has a 2px border-width
     const $aTD = $(".Surface td").first();
+    if ($aTD.length === 0)
+      return;
     const bl = parseInt($aTD.css("border-left"));
     const br = parseInt($aTD.css("border-right"));
     const tdSize = available / sz - (bl + br);
@@ -1106,24 +1137,36 @@ const GameUIMixin = superclass => class extends superclass {
 
     // Configure chat input
     const ui = this;
+    const sendChat = ($input, keepFocus) => {
+      const text = $input.val().trim();
+      if (!text)
+        return;
+      ui.notifyBackend(Game.Notify.MESSAGE, {
+        sender: ui.player ? ui.player.name : "Observer",
+        text: text
+      });
+      $input.val("");
+      if (keepFocus)
+        $input.focus();
+    };
 
     $("#chatInput")
 
-    .on("keydown", event => {
+    .on("keydown", function(event) {
       // Tab and Escape both blur the input
-      if (event.key === "Tab" || event.key === "Escape")
+      if (event.key === "Tab" || event.key === "Escape") {
         $("body").focus();
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        sendChat($(this), true);
+      }
     })
 
     .on("change", function() {
-      // Send chat
-      //ui.debug("f>b message");
-      ui.notifyBackend(Game.Notify.MESSAGE, {
-        sender: ui.player ? ui.player.name : "Observer",
-        text: $(this).val()
-      });
-      $(this).val("");
-      $("body").focus();
+      sendChat($(this), false);
     });
 
     $("#pauseButton")
@@ -1179,7 +1222,7 @@ const GameUIMixin = superclass => class extends superclass {
       else
         this.moveTypingCursor(1, 0);
     } else
-      this.$log($.i18n("nfy-on-rack", letter));
+      this.$log(true, $.i18n("nfy-on-rack", letter));
 
     return false; // stop propagation
   }

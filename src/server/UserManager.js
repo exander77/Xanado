@@ -5,7 +5,13 @@
 /* global assert */
 /* global Platform */
 
-import { promises as Fs } from "fs";
+import {
+  promises as Fs,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync
+} from "fs";
 import { lock } from "proper-lockfile";
 import AsyncLock from "async-lock";
 import { hash, compare } from "bcrypt";
@@ -116,6 +122,48 @@ class UserManager {
   static SESSIONS_DIR = `${__dirname}/../../sessions`;
 
   /**
+   * File used to persist the session secret between restarts
+   * @private
+   */
+  static SESSION_SECRET_FILE = Path.join(
+    UserManager.SESSIONS_DIR, "session.secret");
+
+  /**
+   * Ensure the session secret is stable across restarts, generating
+   * and persisting one if necessary.
+   * @param {object} config application configuration
+   * @return {string} secret string
+   * @private
+   */
+  static getSessionSecret(config) {
+    const configured = config.auth && config.auth.session_secret;
+    if (configured)
+      return configured;
+
+    try {
+      if (existsSync(UserManager.SESSION_SECRET_FILE)) {
+        const saved = readFileSync(
+          UserManager.SESSION_SECRET_FILE, "utf8").trim();
+        if (saved)
+          return saved;
+      }
+    } catch (e) {
+      console.error("Unable to read session secret", e);
+    }
+
+    const secret = genKey();
+    try {
+      writeFileSync(UserManager.SESSION_SECRET_FILE, secret, {
+        encoding: "utf8",
+        mode: 0o600
+      });
+    } catch (e) {
+      console.error("Unable to persist session secret", e);
+    }
+    return secret;
+  }
+
+  /**
    * Construct, adding relevant routes to the given Express application
    * @param {object} config system configuration object
    * @param {object} config.auth optional authentication options
@@ -135,6 +183,11 @@ class UserManager {
     if (/^(users|all)$/i.test(config.debug))
       this.debug = console.debug;
 
+    if (!existsSync(UserManager.SESSIONS_DIR))
+      mkdirSync(UserManager.SESSIONS_DIR, { recursive: true });
+
+    const sessionSecret = UserManager.getSessionSecret(this.config);
+
     // Passport requires express Session to be configured
     const FileStore = SessionFileStore(Session);
     this.sessionStore = new FileStore({
@@ -144,8 +197,7 @@ class UserManager {
     });
     app.use(Session({
       name: SESSION_COOKIE,
-      secret: (config.auth ? config.auth.session_secret : undefined)
-      || genKey(),
+      secret: sessionSecret,
       store: this.sessionStore,
       resave: false,
       saveUninitialized: false,

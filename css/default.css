@@ -537,6 +537,18 @@ body.games-ui {
   content: "\261F";
 }
 
+#main-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  padding: 0 0.5em;
+  margin: 0 auto;
+  gap: 0.5em;
+}
+
 /*------------ PLAY RACK ------------*/
 
 #playRack {
@@ -581,6 +593,20 @@ body.games-ui {
   color: rgba(60, 60, 80, 0.3);
 }
 
+@media screen and (max-width: 600px) {
+
+  #playRack {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5em;
+  }
+
+  #playRack .controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 /*------------ DIALOGS ------------*/
 
 /* Blank letter requester dialog */
@@ -617,6 +643,23 @@ body.games-ui {
     display: flex;
     justify-content: center;
     flex-wrap: nowrap;
+  }
+}
+
+@media screen and (max-width: 1200px) and (min-aspect-ratio: 1/1) {
+  .game-interface {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  #blocks {
+    width: 100%;
+    margin: 1em 0 0 0;
+  }
+
+  #board {
+    margin-left: 0;
   }
 }
 
@@ -1048,4 +1091,3 @@ button.hide-password {
   text-align: center;
   font-size: 0.875rem;
 }
-

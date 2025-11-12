@@ -1,0 +1,57 @@
+/*Copyright (C) 2019-2024 The Xanado Project https://github.com/cdot/Xanado
+  License MIT. Warm desert palette */
+
+.Surface .underlay:before {
+  content: attr(data-short);
+}
+
+.Surface td {
+  border-color: #c6a37a;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #e59f65;
+  border-color: #c96f28;
+  color: #432005;
+}
+
+.Surface td.square-T {
+  background-color: #b3502d;
+  border-color: #7b2c10;
+  color: #ffe6d8;
+}
+
+.Surface td.square-Q {
+  background-color: #7c3a2d;
+  border-color: #562013;
+  color: #fceee6;
+}
+
+.Surface td.square-d {
+  background-color: #f2cc85;
+  border-color: #d19d34;
+  color: #4c3209;
+}
+
+.Surface td.square-t {
+  background-color: #c5d86d;
+  border-color: #8ea630;
+  color: #273109;
+}
+
+.Surface td.square-q {
+  background-color: #7abfb3;
+  border-color: #3b8d81;
+  color: #073733;
+}
+
+.Surface td.square-_ {
+  background-color: #f6e8d2;
+}
+
+.Tile {
+  background-color: #ffd27f !important;
+  border-color: #c4841c !important;
+  color: #5e3306 !important;
+}

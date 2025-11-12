@@ -1,0 +1,57 @@
+/*Copyright (C) 2019-2024 The Xanado Project
+  License MIT. Cool slate/neo-noir palette */
+
+.Surface .underlay:before {
+  content: attr(data-short);
+}
+
+.Surface td {
+  border-color: #5c6672;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #425c77;
+  border-color: #24384d;
+  color: #e3f2fd;
+}
+
+.Surface td.square-T {
+  background-color: #b91c1c;
+  border-color: #801010;
+  color: #ffefef;
+}
+
+.Surface td.square-Q {
+  background-color: #5f259f;
+  border-color: #3c1665;
+  color: #f0e6ff;
+}
+
+.Surface td.square-d {
+  background-color: #1e293b;
+  border-color: #0f172a;
+  color: #dbeafe;
+}
+
+.Surface td.square-t {
+  background-color: #64748b;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+.Surface td.square-q {
+  background-color: #0f766e;
+  border-color: #0a4f48;
+  color: #e0fdf7;
+}
+
+.Surface td.square-_ {
+  background-color: #2f3844;
+}
+
+.Tile {
+  background-color: #f0f4f8 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}

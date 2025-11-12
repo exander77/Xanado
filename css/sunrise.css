@@ -1,0 +1,57 @@
+/*Copyright (C) 2019-2024 The Xanado Project
+  License MIT. Soft sunrise pastels */
+
+.Surface .underlay:before {
+  content: attr(data-short);
+}
+
+.Surface td {
+  border-color: #f2c6c2;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #ffb3c6;
+  border-color: #f472b6;
+  color: #521527;
+}
+
+.Surface td.square-T {
+  background-color: #fca5a5;
+  border-color: #f97316;
+  color: #4a150b;
+}
+
+.Surface td.square-Q {
+  background-color: #c4b5fd;
+  border-color: #7c3aed;
+  color: #1f0b3c;
+}
+
+.Surface td.square-d {
+  background-color: #fde68a;
+  border-color: #fbbf24;
+  color: #4d3200;
+}
+
+.Surface td.square-t {
+  background-color: #a5f3fc;
+  border-color: #22d3ee;
+  color: #083c44;
+}
+
+.Surface td.square-q {
+  background-color: #99f6e4;
+  border-color: #2dd4bf;
+  color: #06352e;
+}
+
+.Surface td.square-_ {
+  background-color: #fff7ed;
+}
+
+.Tile {
+  background-color: #fff0f6 !important;
+  border-color: #f9a8d4 !important;
+  color: #4f1726 !important;
+}

@@ -143,12 +143,23 @@ class GameSetupDialog extends Dialog {
       $fields.each((i, el) => {
         const $el = $(el);
         const field = $el.attr("name");
-        const val = (game ? game[field] : undefined) || ui.getSetting(field);
+        let val;
+        if (game && typeof game[field] !== "undefined")
+          val = game[field];
+        else {
+          const setting = ui.getSetting(field);
+          if (typeof setting !== "undefined")
+            val = setting;
+          else if (typeof Game.DEFAULTS[field] !== "undefined")
+            val = Game.DEFAULTS[field];
+        }
         if (el.tagName === "INPUT" && el.type === "checkbox")
           $el.prop("checked", val).checkboxradio("refresh");
-        else if (el.tagName === "SELECT")
-          $el.val(val).selectmenu("refresh");
-        else if (val)
+        else if (el.tagName === "SELECT") {
+          const effectiveVal = (typeof val === "undefined") ? "none" : val;
+          $el.val(effectiveVal).selectmenu("refresh");
+        }
+        else if (typeof val !== "undefined")
           $el.val(val);
         return true;
       });

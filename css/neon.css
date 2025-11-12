@@ -1,0 +1,57 @@
+/*Copyright (C) 2019-2024 The Xanado Project
+  License MIT. High-contrast neon palette */
+
+.Surface .underlay:before {
+  content: attr(data-short);
+}
+
+.Surface td {
+  border-color: #222831;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #00adb5;
+  border-color: #00868d;
+  color: #002022;
+}
+
+.Surface td.square-T {
+  background-color: #ff2e63;
+  border-color: #c4003a;
+  color: #fff0f6;
+}
+
+.Surface td.square-Q {
+  background-color: #8f00ff;
+  border-color: #5600ad;
+  color: #f8eaff;
+}
+
+.Surface td.square-d {
+  background-color: #f8b400;
+  border-color: #c08100;
+  color: #2f2100;
+}
+
+.Surface td.square-t {
+  background-color: #05ffa1;
+  border-color: #01c575;
+  color: #003921;
+}
+
+.Surface td.square-q {
+  background-color: #ff9d00;
+  border-color: #c76f00;
+  color: #2e1700;
+}
+
+.Surface td.square-_ {
+  background-color: #393e46;
+}
+
+.Tile {
+  background-color: #eeeeee !important;
+  border-color: #00adb5 !important;
+  color: #222831 !important;
+}
