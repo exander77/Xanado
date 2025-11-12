@@ -555,6 +555,7 @@ body.games-ui {
   margin-top: 0.5em;
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 0.75em;
@@ -562,15 +563,20 @@ body.games-ui {
 
 #distributionButton {
   font-weight: bold;
+  flex: 0 0 auto;
+  align-self: center;
 }
 
 #playRack .rack{
+  flex: 0 1 auto;
 }
 
 #playRack .controls {
   display: flex;
+  flex-wrap: nowrap;
   gap: 0.5em;
   align-items: center;
+  flex: 0 0 auto;
 }
 
 /* rack control buttons - shuffle, unplace */
@@ -599,15 +605,18 @@ body.games-ui {
 @media screen and (max-width: 600px) {
 
   #playRack {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75em;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  #playRack .rack {
+    flex: 0 1 70vw;
   }
 
   #playRack .controls {
-    width: 100%;
-    justify-content: space-between;
-    padding: 0 0.5em;
+    width: auto;
+    justify-content: center;
+    padding: 0;
   }
 }
 
