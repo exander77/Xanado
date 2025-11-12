@@ -277,6 +277,7 @@ const GameUIMixin = superclass => class extends superclass {
   handle_CHAT_HISTORY(history) {
     if (!Array.isArray(history) || history.length === 0)
       return;
+    $("#chatBlock .chat-messages").empty();
     for (let i = history.length - 1; i >= 0; i--) {
       const entry = Object.assign({}, history[i], { history: true });
       this.handle_MESSAGE(entry);
