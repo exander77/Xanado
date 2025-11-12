@@ -553,28 +553,29 @@ body.games-ui {
 
 #playRack {
   margin-top: 0.5em;
-  display: flex;
+  display: inline-flex;
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 0.75em;
+  gap: 0.5em;
+  align-self: center;
 }
 
 #distributionButton {
   font-weight: bold;
   flex: 0 0 auto;
-  align-self: center;
+  white-space: nowrap;
 }
 
 #playRack .rack{
-  flex: 0 1 auto;
+  flex: 0 0 auto;
 }
 
 #playRack .controls {
   display: flex;
   flex-wrap: nowrap;
-  gap: 0.5em;
+  gap: 0.4em;
   align-items: center;
   flex: 0 0 auto;
 }
@@ -605,18 +606,12 @@ body.games-ui {
 @media screen and (max-width: 600px) {
 
   #playRack {
-    flex-direction: row;
     flex-wrap: wrap;
-  }
-
-  #playRack .rack {
-    flex: 0 1 70vw;
+    justify-content: center;
   }
 
   #playRack .controls {
-    width: auto;
     justify-content: center;
-    padding: 0;
   }
 }
 
