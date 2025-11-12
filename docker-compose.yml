@@ -1,0 +1,15 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: build/Dockerfile
+    image: xanado:latest
+    volumes:
+      - ./data:/app/data
+      - ./games:/app/games
+      - ./dictionaries:/app/dictionaries:ro
+    ports:
+      - "127.0.0.1:8100:9093"
+    environment:
+      - ENV=production
+    restart: on-failure

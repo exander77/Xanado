@@ -183,7 +183,7 @@ class Game {
     challengePenalty: Game.Penalty.NONE,
 		penaltyPoints:    5,
 
-    wordCheck:        Game.WordCheck.NONE,
+    wordCheck:        Game.WordCheck.REJECT,
     predictScore:     true,
     minPlayers:       2,
     maxPlayers:       0,

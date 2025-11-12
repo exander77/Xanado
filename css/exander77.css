@@ -10,14 +10,14 @@
 }
 
 .Surface td {
-  border-color: :#ada48f;
+  border-color: #ada48f;
 }
 
 /* double-word squares */
 .Surface td.square-D,
 .Surface td.square-M {
   background-color: #05cd85;
-  border-color: #00ee00;
+  border-color: #00cc00;
   color: #ffffff;
 }
 

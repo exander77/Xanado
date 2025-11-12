@@ -6,20 +6,18 @@ WORKDIR /app
 RUN apk update && apk add git
 COPY package*.json ./
 RUN npm install || cat /root/.npm/_logs/*.log
-COPY CONFIGURATION.md .
-COPY DEVELOPING.md .
-COPY README.md .
-COPY audio audio
-COPY bin bin
-COPY css css
-COPY dictionaries/*.dict dictionaries/
-COPY dist dist
-COPY editions editions
-COPY favicon.ico .
-COPY games games
-COPY html html
-COPY i18n i18n
-COPY images images
-COPY src src
+# Copy documentation and assets
+COPY CONFIGURATION.md DEVELOPING.md README.md favicon.ico .
+# Copy necessary directories
+COPY audio/ audio/
+COPY bin/ bin/
+COPY css/ css/
+COPY editions/ editions/
+COPY games/ games/
+COPY html/ html/
+COPY i18n/ i18n/
+COPY images/ images/
+COPY src/ src/
+COPY dist/ dist/
 EXPOSE 9093
-CMD [ "node", "bin/server.js" ]
+CMD [ "node", "bin/server.js", "-c", "data/config.json" ]
