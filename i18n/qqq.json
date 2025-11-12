@@ -91,6 +91,7 @@
   "Timer": "title of fieldset",
   "Turn timer": "Types.Timer.TURN: type of timer",
   "Type": "label: timer type select",
+  "unknown-date": "fallback string when a stored date is missing or invalid",
   "Undo the last play": "tooltip: undo button in game screen",
   "Word checking": "title for word checking select",
   "XANADO problem": "Alert to user reporting an error on the server",

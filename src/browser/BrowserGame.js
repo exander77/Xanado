@@ -54,6 +54,28 @@ class BrowserGame extends Undo(Commands(Game)) {
                   list[list.length - 1]);
   }
 
+  static #safeDate(value) {
+    if (value === null || typeof value === "undefined")
+      return undefined;
+    let numeric = value;
+    if (typeof value === "string" && value.trim() !== "") {
+      const coerced = Number(value);
+      if (!Number.isNaN(coerced))
+        numeric = coerced;
+    }
+    const date = new Date(numeric);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  }
+
+  static formatDate(value, includeTime = false) {
+    const date = BrowserGame.#safeDate(value);
+    if (!date)
+      return $.i18n("unknown-date");
+    return includeTime
+      ? `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
+      : date.toDateString();
+  }
+
   /**
    * Headline is the text shown in the game table and the head
    * of the game dialog.
@@ -73,7 +95,7 @@ class BrowserGame extends Undo(Commands(Game)) {
     const repl = (m, p1) => {
       switch (p1) {
       case "c":
-        return new Date(this.creationTimestamp).toDateString();
+        return BrowserGame.formatDate(this.creationTimestamp);
       case "e":
         return this.edition;
       case "k":
@@ -81,8 +103,8 @@ class BrowserGame extends Undo(Commands(Game)) {
       case "l":
         {
           const t = this.lastTurn();
-          const d = new Date(t ? t.timestamp : this.creationTimestamp);
-          return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+          return BrowserGame.formatDate(
+            t ? t.timestamp : this.creationTimestamp, true);
         }
       case "p":
         return BrowserGame.andList(this.getPlayers().map(p => p.name));
