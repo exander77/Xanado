@@ -6,6 +6,7 @@ services:
     image: xanado:latest
     volumes:
       - ./data:/app/data
+      - ./sessions:/app/sessions
       - ./games:/app/games
       - ./dictionaries:/app/dictionaries:ro
     ports:
