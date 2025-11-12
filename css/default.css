@@ -555,8 +555,9 @@ body.games-ui {
   margin-top: 0.5em;
   display: flex;
   flex-direction: row;
-  justify-content: space-around;
+  justify-content: center;
   align-items: center;
+  gap: 0.75em;
 }
 
 #distributionButton {
@@ -568,6 +569,8 @@ body.games-ui {
 
 #playRack .controls {
   display: flex;
+  gap: 0.5em;
+  align-items: center;
 }
 
 /* rack control buttons - shuffle, unplace */
@@ -597,13 +600,14 @@ body.games-ui {
 
   #playRack {
     flex-direction: column;
-    align-items: center;
-    gap: 0.5em;
+    align-items: stretch;
+    gap: 0.75em;
   }
 
   #playRack .controls {
     width: 100%;
     justify-content: space-between;
+    padding: 0 0.5em;
   }
 }
 

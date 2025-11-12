@@ -287,7 +287,13 @@ class Dialog {
         value = parseInt($(this).val());
         if (isNaN(value))
           return;
-      } else // text, password, email, <select, <textarea
+      } else if (this.tagName === "SELECT") {
+        value = $(this).val();
+        if (typeof value === "undefined" || value === null || value === "")
+          value = $(this).find("option:selected").attr("value")
+          || $(this).find("option:selected").text()
+          || "";
+      } else // text, password, email, <textarea
         value = $(this).val() || $(this).text();
       //console.debug(name,"=",value);
       // Collect <input with the same name, and make arrays
