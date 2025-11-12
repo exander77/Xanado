@@ -54,7 +54,32 @@ class BackendGame extends Undo(Replay(Commands(Game))) {
     }
     return Promise.resolve(this);
   }
+
+  selectRobotPlay(player, candidates) {
+    if (player && player.robotType === "yobot"
+        && candidates && candidates.length
+        && this._aiConfig && this._aiConfig.openai_key) {
+      if (this._aiConfig.debugYobot)
+        console.log(`[Yobot] ${this.key}: evaluating ${candidates.length} option(s) for ${player.name}`);
+      return import("./YobotStrategy.js")
+      .then(mod => mod.chooseYobotPlay(
+        this, player, candidates, this._aiConfig))
+      .then(choice => {
+        if (this._aiConfig.debugYobot && choice) {
+          const label = choice._yobotLabel || "?";
+          const reason = choice._yobotReason || "No reason provided";
+          console.log(
+            `[Yobot] ${this.key}: chose option ${label} -> ${choice.stringify()} (score ${choice.score}) because ${reason}`);
+        }
+        return choice;
+      })
+      .catch(e => {
+        console.error("Yobot strategy failed:", e.message || e);
+        return super.selectRobotPlay(player, candidates);
+      });
+    }
+    return super.selectRobotPlay(player, candidates);
+  }
 }
 
 export { BackendGame }
-

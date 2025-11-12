@@ -26,6 +26,13 @@ const __dirname = Path.dirname(fileURLToPath(import.meta.url));
 
 import { genKey, stringify } from "../common/Utils.js";
 
+function hasDebug(config, flag) {
+  if (config && config.debugSet instanceof Set)
+    return config.debugSet.has(flag) || config.debugSet.has("all");
+  const debug = (config && config.debug ? config.debug.toLowerCase() : "");
+  return debug === flag || debug === "all";
+}
+
 const dbLock = new AsyncLock();
 
 function pw_hash(pw) {
@@ -180,7 +187,7 @@ class UserManager {
     this.db = undefined;
 
     /* c8 ignore next 2 */
-    if (/^(users|all)$/i.test(config.debug))
+    if (hasDebug(config, "users"))
       this.debug = console.debug;
 
     if (!existsSync(UserManager.SESSIONS_DIR))

@@ -404,7 +404,18 @@ body.games-ui {
 /*------------ CHAT BLOCK ------------*/
 
 #chatBlock {
-  max-height: 8em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+#chatBlock .chat-messages {
+  max-height: 10em;
+  overflow-y: auto;
+  padding: 0.5em;
+  border: 1px solid #bba;
+  border-radius: 0.4em;
+  background: rgba(255,255,255,0.7);
 }
 
 #chatInput {

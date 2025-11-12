@@ -35,6 +35,20 @@ the following fields:
     + `allowTakeBack` : Whether or not to allow players to take back their most recent move without penalty, so long as the next player hasn't challenged or played. Default is `true`.
 + `games` : Path to the directory where games files will be stored,
   relative to the root of the installation. Defaults to `games`.
++ `chats` : Path to the directory where per-game chat transcripts are stored
+  (defaults to `chats`). Removing the files from this directory is enough to
+  purge old chat history.
++ `ai` : Optional configuration for AI-enabled robots such as Yobot.
+  + `openai_key` : API key used to call OpenAI compatible chat models. If
+    omitted, Yobot cannot be added to games.
+  + `yobot_model` : Model identifier to use when talking to the API. Defaults
+    to `gpt-4o-mini`.
+  + `yobot_base_url` : Endpoint for the chat completion API. Defaults to
+    `https://api.openai.com/v1/chat/completions`. Override if you are routing
+    through a proxy or compatible provider.
+  + `yobot_max_candidates` : Maximum number of candidate moves sent to Yobot
+    for evaluation. Defaults to `5`.
+  + `temperature` : Optional sampling temperature (defaults to `0.2`).
 + `host` : name of server host. Defaults to `0.0.0.0` (all interfaces). Change to `localhost` to bind only the IP address of the host the server is running on.
 + `html_dir`: sets the directory to get top level html files from. Will usually be either `dist` (for distribution) or `html` (for development). Defaults to `dist`.
 + `https` : HTTPS configuration structure. HTTPS is required for notifications to work in the browser and may be important for protecting passwords. See [here](https://linuxize.com/post/creating-a-self-signed-ssl-certificate/) for how to create a self-signed certificate. On Linux: `openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out https.crt -keyout https.key`

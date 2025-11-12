@@ -32,7 +32,7 @@ const CBOR_tagHandler = new (KeyDictionaryHandler(
       "3", "4", "5", "6", "7", "8", "9",
       // Player
       "name", "rack", "passes", "clock", "missNextTurn", "wantsAdvice",
-      "isRobot", "canChallenge", "delayBeforePlay",
+      "isRobot", "canChallenge", "delayBeforePlay", "robotType",
       // Turn
       "gameKey", "playerKey", "nextToGoKey", "timestamp",
       "placements", "replacements", "challengerKey", "endState",

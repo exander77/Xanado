@@ -9,6 +9,14 @@ and license information. Author Crawford Currie http://c-dot.co.uk-->
 </div>
 
 <div class="dialog-row">
+  <label for="robotType" data-i18n-tooltip="tt-robot-type" data-i18n="label-robot-type"></label>
+  <select id="robotType" name="robotType">
+    <option value="classic" data-i18n="option-robot-classic"></option>
+    <option value="yobot" data-i18n="option-robot-yobot"></option>
+  </select>
+</div>
+
+<div class="dialog-row">
   <label for="canChallenge" data-i18n-tooltip="tt-can-chall" data-i18n="Can challenge"></label>
   <input type="checkbox" id="canChallenge" name="canChallenge"/>
 </div>
@@ -22,4 +30,3 @@ and license information. Author Crawford Currie http://c-dot.co.uk-->
   <!--autofocus to stop the dictionary tooltip from popping up-->
   <button class="submit" data-i18n="Add robot" autofocus></button>
 </div>
-

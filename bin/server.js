@@ -35,6 +35,7 @@ const DEFAULT_CONFIG = {
   port: 9093, // random pick
   host: "0.0.0.0", // all interfaces, required for docker to work
   games: path.join(__dirname, "..", "games"),
+  chats: path.join(__dirname, "..", "chats"),
   maxAge: 14 * 24 * 60 * 60 * 1000, // 2 weeks
   game_defaults: Game.DEFAULTS,
   // Defaults passed to the UI without processing by the server
@@ -47,6 +48,13 @@ const DEFAULT_CONFIG = {
     tile_click: true,
     one_window: false, // don't open games in the same tab
     turn_alert: true
+  },
+  ai: {
+    openai_key: "",
+    yobot_model: "gpt-4o-mini",
+    yobot_base_url: "https://api.openai.com/v1/chat/completions",
+    yobot_max_candidates: 5,
+    temperature: 0.2
   }
 };
 
@@ -86,16 +94,26 @@ const DESCRIPTION = [
   "OPTIONS",
   "\t-c, --config <file> - Path to config file",
   "\t-h, --html <dir> - load html from the given directory (default is 'dist')",
-  "\t-d, --debug <options> - set debug options",
-  "\t\tgame - game logic",
-  "\t\tserver - server activity",
-  "\t\tusers - user management",
-  "\t\tall - all the above"
+"\t-d, --debug <options> - set debug options",
+"\t\tgame - game logic",
+"\t\tserver - server activity",
+"\t\tusers - user management",
+"\t\tyobot - Yobot AI decisions",
+"\t\tall - all the above"
 ].join("\n");
+
+const normalizedArgv = [];
+for (let i = 0; i < process.argv.length; i++) {
+  const arg = process.argv[i];
+  if (arg === "--debug" && i + 1 < process.argv.length) {
+    normalizedArgv.push(`--debug=${process.argv[++i]}`);
+  } else
+    normalizedArgv.push(arg);
+}
 
 const go_parser = new getopt.BasicParser(
   "h:(html)d:(debug)c:(config)",
-  process.argv);
+  normalizedArgv);
 
 const options = {};
 let option;
@@ -135,6 +153,15 @@ p.then(json => addDefaults(JSON.parse(json)))
 
   // config.debug is a CSV
   config.debug = (options.debug || config.debug) || "";
+  const debugTokens = config.debug
+    .split(/[, ]+/)
+    .map(t => t.trim().toLowerCase())
+    .filter(Boolean);
+  config.debugTokens = debugTokens;
+  config.debugSet = new Set(debugTokens);
+  if (!config.debugYobot)
+    config.debugYobot =
+    debugTokens.includes("yobot") || debugTokens.includes("all");
 
   // html_dir is a directory name
   config.html_dir = (options.html_dir || config.html_dir) || "dist";
@@ -142,31 +169,31 @@ p.then(json => addDefaults(JSON.parse(json)))
   if (/^(server|all)$/i.test(options.debug))
     console.debug(config);
 
-  if (config.mail) {
-    let transport;
-    if (config.mail.transport === "mailgun") {
-      if (!process.env.MAILGUN_SMTP_SERVER)
-        console.error("mailgun configuration requested, but MAILGUN_SMTP_SERVER not defined");
-      else {
-        if (!config.mail.sender)
-          config.mail.sender = `xanado@${process.env.MAILGUN_DOMAIN}`;
-        transport = {
-          host: process.env.MAILGUN_SMTP_SERVER,
-          port: process.env.MAILGUN_SMTP_PORT,
-          secure: false,
-          auth: {
-            user: process.env.MAILGUN_SMTP_LOGIN,
-            pass: process.env.MAILGUN_SMTP_PASSWORD
-          }
-        };
-      }
-    } else
-      // Might be SMTP, might be something else
-      transport = config.mail.transport;
-    
-    if (transport)
-      config.mail.transport = nodemailer.createTransport(transport);
-  }
+if (config.mail) {
+  let transport;
+  if (config.mail.transport === "mailgun") {
+    if (!process.env.MAILGUN_SMTP_SERVER)
+      console.error("mailgun configuration requested, but MAILGUN_SMTP_SERVER not defined");
+    else {
+      if (!config.mail.sender)
+        config.mail.sender = `xanado@${process.env.MAILGUN_DOMAIN}`;
+      transport = {
+        host: process.env.MAILGUN_SMTP_SERVER,
+        port: process.env.MAILGUN_SMTP_PORT,
+        secure: false,
+        auth: {
+          user: process.env.MAILGUN_SMTP_LOGIN,
+          pass: process.env.MAILGUN_SMTP_PASSWORD
+        }
+      };
+    }
+  } else
+    // Might be SMTP, might be something else
+    transport = config.mail.transport;
+  
+  if (transport)
+    config.mail.transport = nodemailer.createTransport(transport);
+}
 
   const promises = [];
   if (config.https) {
@@ -195,4 +222,3 @@ p.then(json => addDefaults(JSON.parse(json)))
       socket => server.attachSocketHandlers(socket));
   });
 });
-

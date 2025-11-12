@@ -125,8 +125,11 @@ class GameDialog extends Dialog {
           $join.show().button("option", { label: $.i18n("Join game") });
         if (this.options.ui.getSetting("canEmail"))
           $invite.show();
-        if (!game.getPlayers().find(p => p.isRobot))
+        if ((game.maxPlayers || 0) === 0
+            || game.getPlayers().length < game.maxPlayers)
           $robot.show();
+        if (!game.getPlayerWithKey(this.options.ui.session.key))
+          $observe.show();
       } else {
         // Game is over, offer to observe
         $observe.show();

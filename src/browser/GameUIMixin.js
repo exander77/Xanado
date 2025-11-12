@@ -168,6 +168,19 @@ const GameUIMixin = superclass => class extends superclass {
   }
 
   /**
+   * Append to the chat pane.
+   * @private
+   */
+  $chat(interactive, $content) {
+    const $container = $("#chatBlock .chat-messages");
+    if ($container.length === 0)
+      return;
+    $container.prepend($content);
+    if (interactive)
+      $container.stop(true).animate({ scrollTop: 0 }, 200);
+  }
+
+  /**
    * True if the key is this current player key
    * @memberof browser/GameUIMixin
    * @instance
@@ -243,7 +256,8 @@ const GameUIMixin = superclass => class extends superclass {
     $msg.text($.i18n.apply(null, args));
     $mess.append($msg);
 
-    this.$log(true, $mess);
+    const interactive = !message.history;
+    this.$chat(interactive, $mess);
 
     // Special handling for _hint_, highlight square
     if (message.sender === "Advisor"
@@ -252,6 +266,20 @@ const GameUIMixin = superclass => class extends superclass {
       // args[3] is col, args[4] is score
       let row = args[2] - 1, col = args[3] - 1;
       $(`#Board_${col}x${row}`).addClass("hint-placement");
+    }
+  }
+
+  /**
+   * Replay stored chat messages when joining a game.
+   * @param {object[]} history list of message objects
+   * @private
+   */
+  handle_CHAT_HISTORY(history) {
+    if (!Array.isArray(history) || history.length === 0)
+      return;
+    for (let i = history.length - 1; i >= 0; i--) {
+      const entry = Object.assign({}, history[i], { history: true });
+      this.handle_MESSAGE(entry);
     }
   }
 
@@ -1049,6 +1077,9 @@ const GameUIMixin = superclass => class extends superclass {
     // Attempted play has been rejected
     .on(Game.Notify.REJECT,
         params => this.handle_REJECT(params))
+
+    .on(Game.Notify.CHAT_HISTORY,
+        history => this.handle_CHAT_HISTORY(history))
 
     // Game has been paused
     .on(Game.Notify.PAUSE,

@@ -206,6 +206,26 @@ class ClientGamesUI extends ClientUIMixin(GamesUIMixin(UI)) {
    * @implements browser/GamesUIMixin#observe
    */
   observe(game) {
+    const startObserving = name => {
+      const observer = encodeURIComponent(name || "Observer");
+      console.debug("Observe game", game.key, "as", observer);
+      $.get(`/join/${game.key}?observer=${observer}`)
+      .then(url => {
+        if (this.getSetting("one_window"))
+          location.replace(url);
+        else {
+          window.open(url, "_blank");
+          this.refreshGame(game.key);
+        }
+      })
+      .catch(e => this.alert(e, $.i18n("failed", $.i18n("Open game"))));
+    };
+
+    if (this.session) {
+      startObserving(this.session.name || this.session.key);
+      return;
+    }
+
     const obs = $.i18n("Observe game");
     const ui = this;
     $("#observeDialog")
@@ -218,19 +238,8 @@ class ClientGamesUI extends ClientUIMixin(GamesUIMixin(UI)) {
       closeText: obs,
       modal: true,
       close: function() {
-        const name = encodeURIComponent(
-          $(this).find("#observerName").val());
-        console.debug("Observe game", game.key, "as", name);
-        $.get(`/join/${game.key}?observer=${encodeURI(name)}`)
-        .then(url => {
-          if (ui.getSetting("one_window"))
-            location.replace(url);
-          else {
-            window.open(url, "_blank");
-            ui.refreshGame(game.key);
-          }
-        })
-        .catch(e => ui.alert(e, $.i18n("failed", $.i18n("Open game"))));
+        const name = $(this).find("#observerName").val();
+        startObserving(name);
       }
     });
   }
@@ -275,8 +284,8 @@ class ClientGamesUI extends ClientUIMixin(GamesUIMixin(UI)) {
           content: $.i18n("tt-remove-robot")
         })
         .on("click", () => {
-          console.debug(`Remove robot from ${game.key}`);
-          $.post(`/removeRobot/${game.key}`)
+          console.debug(`Remove robot ${player.key} from ${game.key}`);
+          $.post(`/removeRobot/${game.key}`, { playerKey: player.key })
           .then(() => this.refreshGame(game.key))
           .catch(e => this.alert(e, $.i18n("failed", $.i18n("Remove robot"))));
         }));

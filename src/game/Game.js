@@ -109,6 +109,7 @@ class Game {
     MESSAGE:      "message",
     NEXT_GAME:    "next game",
     PAUSE:        "pause game",
+    CHAT_HISTORY: "chat history",
     REJECT:       "reject play",
     TICK:         "tick timer",
     TURN:         "play turn",
@@ -1414,23 +1415,10 @@ class Game {
           return this.confirmGameOver(player, Game.State.GAME_OVER);
       }
 
-      // We can play.
-      let bestPlay = null;
-      return this.findBestPlay(
-        player.rack.tiles(),
-        data => {
-          if (typeof data === "string") {
-            /* c8 ignore next 2 */
-            if (this._debug)
-              this._debug(data);
-          } else {
-            bestPlay = data;
-            /* c8 ignore next 2 */
-            if (this._debug)
-              this._debug("Best", bestPlay.stringify());
-          }
-        }, player.dictionary || this.dictionary)
-      .then(() => {
+      const candidateLimit = this.robotCandidateLimit(player);
+      return this.collectRobotCandidates(player, candidateLimit)
+      .then(candidates => this.selectRobotPlay(player, candidates))
+      .then(bestPlay => {
         if (bestPlay)
           return mid.then(() => this.play(player, bestPlay));
 
@@ -1440,6 +1428,43 @@ class Game {
         return this.pass(player, Turn.Type.PASSED);
       });
     });
+  }
+
+  robotCandidateLimit(player) {
+    if (player && player.robotType === "yobot"
+        && this._aiConfig && this._aiConfig.yobot_max_candidates) {
+      const limit = parseInt(this._aiConfig.yobot_max_candidates, 10);
+      if (limit > 1)
+        return limit;
+    }
+    return 1;
+  }
+
+  collectRobotCandidates(player, limit = 1) {
+    const dictionary = player.dictionary || this.dictionary;
+    const candidates = [];
+    const seen = new Set();
+    const scoreOf = move => (typeof move.score === "number" ? move.score : 0);
+    return this.findBestPlay(
+      player.rack.tiles(),
+      data => {
+        if (typeof data === "string" || !data)
+          return;
+        const move = new Move(data);
+        const key = move.stringify();
+        if (seen.has(key))
+          return;
+        seen.add(key);
+        candidates.push(move);
+        candidates.sort((a, b) => scoreOf(b) - scoreOf(a));
+        if (candidates.length > limit)
+          candidates.length = limit;
+      }, dictionary)
+    .then(() => candidates);
+  }
+
+  selectRobotPlay(player, candidates) {
+    return Promise.resolve(candidates[0] || null);
   }
 
   /**

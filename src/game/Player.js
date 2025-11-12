@@ -128,6 +128,16 @@ class Player {
        */
       this.delayBeforePlay = spec.delayBeforePlay;
 
+    if (spec.robotType)
+      /**
+       * Strategy identifier for robot players (e.g. classic, yobot).
+       * Default is `classic` for robots and undefined for humans.
+       * @member {string?}
+       */
+      this.robotType = spec.robotType;
+    else if (this.isRobot && !this.robotType)
+      this.robotType = "classic";
+
     /**
      * Debug function
      * @member {function?}
@@ -159,6 +169,7 @@ class Player {
       if (this._isConnected) simple._isConnected = true;
       if (this.dictionary) simple.dictionary = this.dictionary;
       if (this.clock) simple.clock = this.clock;
+      if (this.robotType) simple.robotType = this.robotType;
 
       // Can they be emailed?
       if (ump.email) simple.email = true;
@@ -181,6 +192,7 @@ class Player {
     if (this.missNextTurn) params.m = true;
     params.n = this.name;
     if (this.isRobot) params.r = true;
+    if (this.robotType) params.y = this.robotType;
     params.R = this.rack.pack();
     params.s = this.score;
     return params;
@@ -199,6 +211,7 @@ class Player {
     if (params[`P${index}m`]) this.missNextTurn = true;
     this.name = params[`P${index}n`];
     if (params[`P${index}r`]) this.isRobot = true;
+    if (params[`P${index}y`]) this.robotType = params[`P${index}y`];
     this.score = Number(params[`P${index}s`]);
     this.rack.unpack(params[`P${index}R`], edition);
   }

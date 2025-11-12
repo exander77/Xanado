@@ -7,6 +7,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./sessions:/app/sessions
+      - ./chats:/app/chats
       - ./games:/app/games
       - ./dictionaries:/app/dictionaries:ro
     ports:

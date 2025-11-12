@@ -22,8 +22,18 @@ import { Edition } from "../game/Edition.js";
 import { BackendGame } from "../backend/BackendGame.js";
 import { FileDatabase } from "./FileDatabase.js";
 import { UserManager } from "./UserManager.js";
+import { genKey } from "../common/Utils.js";
 
 const Player = BackendGame.CLASSES.Player;
+const CHAT_HISTORY_LIMIT = 500;
+
+function hasDebug(config, flag) {
+  if (config && config.debugSet instanceof Set) {
+    return config.debugSet.has(flag) || config.debugSet.has("all");
+  }
+  const debug = (config && config.debug ? config.debug.toLowerCase() : "");
+  return debug === flag || debug === "all";
+}
 
 /**
  * In the event of an error in a chain handling a request,
@@ -100,8 +110,21 @@ class Server {
     this.config = config;
 
     /* c8 ignore next 2 */
-    if (/^(server|all)$/i.test(config.debug))
+    if (hasDebug(config, "server"))
       this.debug = console.debug;
+
+    this.debugYobot = !!(config.debugYobot || hasDebug(config, "yobot"));
+    if (this.debugYobot)
+      console.log("Yobot debug logging enabled");
+
+    this.aiConfig = Object.assign({}, config.ai || {});
+
+    const chatDirConfig = config.chats || Path.join(staticRoot, "chats");
+    this.chatDir = Path.isAbsolute(chatDirConfig)
+      ? chatDirConfig : Path.join(staticRoot, chatDirConfig);
+    this.chatWrites = new Map();
+    Fs.mkdir(this.chatDir, { recursive: true })
+    .catch(e => console.error("Failed to ensure chat directory", this.chatDir, e));
 
     // Add a couple of dynamically computed defaults that need to
     // be sent with /defaults/:user
@@ -332,19 +355,33 @@ class Server {
     /* c8 ignore next 2 */
     if (typeof key === "undefined")
       return Promise.reject("Game key is undefined");
-    if (this.games[key])
-      return Promise.resolve(this.games[key]);
+    if (this.games[key]) {
+      const cached = this.games[key];
+      const yobotDebug = !!(this.debugYobot || hasDebug(this.config, "yobot"));
+      const configCopy = Object.assign({}, this.aiConfig, {
+        debugYobot: yobotDebug
+      });
+      cached._aiConfig = configCopy;
+      if (this.debugYobot && !cached._debug)
+        cached._debug = console.debug;
+      return Promise.resolve(cached);
+    }
 
     return this.db.get(key)
     .then(d => CBOR.decode(d, BackendGame.CLASSES))
     .then(game => game.onLoad(this.db))
     .then(game => game.checkAge(this.config.maxAge))
     .then(game => {
-      this.games[key] = game;
-      /* c8 ignore next 2 */
-      if (/^(game|all)$/i.test(this.config.debug))
+      const yobotDebug = !!(this.debugYobot || hasDebug(this.config, "yobot"));
+      const configCopy = Object.assign({}, this.aiConfig, {
+        debugYobot: yobotDebug
+      });
+      game._aiConfig = configCopy;
+      if (hasDebug(this.config, "game"))
         game._debug = console.debug;
-
+      else if (this.debugYobot && !game._debug)
+        game._debug = console.debug;
+      this.games[key] = game;
       return game.playIfReady();
     });
   }
@@ -425,6 +462,7 @@ class Server {
     this.loadGameFromDB(params.gameKey)
     .then(game => {
       return game.connect(socket, params.playerKey)
+      .then(() => this.sendChatHistory(socket, params.gameKey))
       .then(() => {
         // Tell everyone in the game
         game.sendCONNECTIONS();
@@ -489,6 +527,7 @@ class Server {
 
     default:
       socket.game.notifyAll(BackendGame.Notify.MESSAGE, message);
+      this.appendChatMessage(socket.game.key, message);
     }
   }
 
@@ -516,6 +555,76 @@ class Server {
     if (this.debug)
       this.debug("b>f update *");
     this.monitors.forEach(socket => socket.emit(BackendGame.Notify.UPDATE));
+  }
+
+  chatFile(gameKey) {
+    return Path.join(this.chatDir, `${gameKey}.json`);
+  }
+
+  loadChatHistory(gameKey) {
+    if (!this.chatDir)
+      return Promise.resolve([]);
+    return Fs.readFile(this.chatFile(gameKey), "utf8")
+    .then(data => JSON.parse(data))
+    .catch(e => {
+      if (e.code === "ENOENT")
+        return [];
+      console.error("Failed to read chat history", gameKey, e);
+      return [];
+    });
+  }
+
+  appendChatMessage(gameKey, message) {
+    if (!this.chatDir || !gameKey || !message)
+      return Promise.resolve();
+    const entry = {
+      sender: message.sender,
+      text: message.text,
+      args: message.args,
+      classes: message.classes,
+      timestamp: message.timestamp || message._timestamp || Date.now()
+    };
+    const chain = (this.chatWrites.get(gameKey) || Promise.resolve())
+    .catch(() => {})
+    .then(() => this.loadChatHistory(gameKey)
+          .then(history => {
+            history.push(entry);
+            if (history.length > CHAT_HISTORY_LIMIT)
+              history = history.slice(history.length - CHAT_HISTORY_LIMIT);
+            return Fs.writeFile(
+              this.chatFile(gameKey),
+              JSON.stringify(history, null, 2));
+          })
+          .catch(e => console.error("Failed to persist chat", gameKey, e)));
+    const tracked = chain.finally(() => {
+      if (this.chatWrites.get(gameKey) === tracked)
+        this.chatWrites.delete(gameKey);
+    });
+    this.chatWrites.set(gameKey, tracked);
+    return tracked;
+  }
+
+  sendChatHistory(socket, gameKey) {
+    if (!socket || !gameKey)
+      return Promise.resolve();
+    return this.loadChatHistory(gameKey)
+    .then(history => {
+      if (!history.length)
+        return;
+      socket.emit(
+        BackendGame.Notify.CHAT_HISTORY,
+        history.map(entry => Object.assign({}, entry, { history: true })));
+    });
+  }
+
+  removeChatHistory(gameKey) {
+    if (!this.chatDir || !gameKey)
+      return Promise.resolve();
+    return Fs.unlink(this.chatFile(gameKey))
+    .catch(e => {
+      if (e.code !== "ENOENT")
+        console.error("Failed to remove chat history", gameKey, e);
+    });
   }
 
   /**
@@ -757,8 +866,14 @@ class Server {
     .then(() => new BackendGame(req.body).create())
     .then(game => game.onLoad(this.db))
     .then(game => {
-      /* c8 ignore next 2 */
-      if (/^(game|all)$/i.test(this.config.debug))
+      const yobotDebug = !!(this.debugYobot || hasDebug(this.config, "yobot"));
+      const configCopy = Object.assign({}, this.aiConfig, {
+        debugYobot: yobotDebug
+      });
+      game._aiConfig = configCopy;
+      if (hasDebug(this.config, "game"))
+        game._debug = console.debug;
+      else if (this.debugYobot && !game._debug)
         game._debug = console.debug;
       /* c8 ignore next 2 */
       if (this.debug)
@@ -873,7 +988,11 @@ class Server {
     return this.loadGameFromDB(gameKey)
     .catch(e => replyAndThrow(res, 400, `Game ${gameKey} load failed`, e))
     .then(game => {
-      if (req.user) { // signed-in user
+      if (req.query && typeof req.query.observer !== "undefined") {
+        // Observer path takes precedence
+        pram = `observer=${encodeURI(req.query.observer)}`;
+        prom = Promise.resolve();
+      } else if (req.user) { // signed-in user joining as player
         const playerKey = req.user.key;
         let player = game.getPlayerWithKey(playerKey);
         if (player) {
@@ -894,10 +1013,6 @@ class Server {
           .then(game => game.playIfReady());
         }
         pram = `player=${playerKey}`;
-      } else if (req.query && typeof req.query.observer !== "undefined") {
-        // Observer is joining
-        pram = `observer=${encodeURI(req.query.observer)}`;
-        prom = Promise.resolve();
       } else {
         replyAndThrow(res, 400, "Not signed in and no ?observer");
       }
@@ -919,8 +1034,7 @@ class Server {
   }
 
   /**
-   * Add a robot to the game.  It's an error to add a robot to a
-   * game that already has a robot.
+   * Add a robot to the game.
    * @param {Request} req the request object
    * @param {string} req.params.gameKey the game key
    * @param {string} req.body.dictionary optional dictionary name to
@@ -933,20 +1047,32 @@ class Server {
   POST_addRobot(req, res) {
     const gameKey = req.params.gameKey;
     const dic = req.body.dictionary;
+    const robotType = (req.body.robotType || "classic").toLowerCase();
+    if (!["classic", "yobot"].includes(robotType))
+      replyAndThrow(res, 400, `Unknown robot type ${robotType}`);
+    if (robotType === "yobot"
+        && (!this.aiConfig || !this.aiConfig.openai_key))
+      replyAndThrow(res, 400, "Yobot requires AI configuration on the server");
     return this.loadGameFromDB(gameKey)
     .catch(e => replyAndThrow(res, 400, `Game ${gameKey} load failed`, e))
     .then(game => {
-      if (game.hasRobot())
-        replyAndThrow(res, 400, `Game ${gameKey} already has a robot`);
-
       /* c8 ignore next 2 */
       if (this.debug)
         this.debug("Robot joining", gameKey, "with", dic);
-      // Robot always has the same player key
+      let robotKey = UserManager.ROBOT_KEY;
+      if (game.players.some(p => p.key === robotKey))
+        robotKey = `${UserManager.ROBOT_KEY}-${genKey()}`;
+      const baseName = robotType === "yobot" ? "Yobot" : "Robot";
+      const nameCount = game.players.filter(
+        p => p.isRobot && typeof p.name === "string"
+          && p.name.startsWith(baseName)).length;
+      const robotName = nameCount ? `${baseName} ${nameCount + 1}` : baseName;
+
       const robot = new Player({
-        name: "Robot",
-        key: UserManager.ROBOT_KEY,
+        name: robotName,
+        key: robotKey,
         isRobot: true,
+        robotType,
         canChallenge: req.body.canChallenge,
         delayBeforePlay: parseInt(req.body.delayBeforePlay || "0")
       }, BackendGame.CLASSES);
@@ -981,7 +1107,11 @@ class Server {
     return this.loadGameFromDB(gameKey)
     .catch(e => replyAndThrow(res, 400, `Game ${gameKey} load failed`, e))
     .then(game => {
-      const robot = game.hasRobot();
+      let robot;
+      if (req.body && req.body.playerKey)
+        robot = game.getPlayerWithKey(req.body.playerKey);
+      if (!robot || !robot.isRobot)
+        robot = game.hasRobot();
       if (!robot)
         replyAndThrow(res, 400, `Game ${gameKey} doesn't have a robot`);
       /* c8 ignore next 2 */
@@ -1086,6 +1216,7 @@ class Server {
         this.debug("Delete game", gameKey);
       game.stopTheClock(); // in case it's running
       return this.db.rm(gameKey)
+      .then(() => this.removeChatHistory(gameKey))
       .then(() => reply(res, gameKey))
       .then(() => this.updateMonitors());
     });
