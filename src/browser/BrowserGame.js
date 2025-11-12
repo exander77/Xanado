@@ -205,6 +205,9 @@ class BrowserGame extends Undo(Commands(Game)) {
     if (turn.type === Turn.Type.GAME_ENDED)
       return this.describeGameOver(turn, uiPlayer);
 
+    const replacements = Array.isArray(turn.replacements)
+          ? turn.replacements : [];
+
     const $description = $(document.createElement("div"))
           .addClass("turn-description");
 
@@ -264,7 +267,7 @@ class BrowserGame extends Undo(Commands(Game)) {
       $action.append(this.$formatScore(turn, false));
       // Check if the play emptied the rack of the playing player
       if (isLastTurn
-          && turn.replacements.length === 0
+          && replacements.length === 0
           && player.rack.isEmpty()
           && !this.hasEnded()) {
 
@@ -284,7 +287,7 @@ class BrowserGame extends Undo(Commands(Game)) {
     case Turn.Type.SWAPPED:
       $action.append($.i18n(
         "log-swapped",
-        turn.replacements.length));
+        replacements.length));
       break;
 
     case Turn.Type.TIMED_OUT:
