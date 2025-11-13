@@ -14,12 +14,16 @@ and license information. Author Crawford Currie http://c-dot.co.uk*/
 import getopt from "posix-getopt";
 import { promises as Fs } from "fs";
 import path from "path";
+import os from "os";
+import { promisify } from "util";
+import { execFile } from "child_process";
 import { Server as SocketServer } from "socket.io";
 import HTTP from "http";
 import HTTPS from "https";
 import nodemailer from "nodemailer";
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const execFileAsync = promisify(execFile);
 
 import jQuery from "jquery";
 global.$ = global.jQuery = jQuery;
@@ -86,6 +90,38 @@ function addDefaults(config) {
   return config;
 }
 
+function generateSelfSigned(commonName) {
+  const prefix = path.join(os.tmpdir(), "xanado-cert-");
+  let keyPath, certPath;
+  return Fs.mkdtemp(prefix)
+  .then(dir => {
+    keyPath = path.join(dir, "key.pem");
+    certPath = path.join(dir, "cert.pem");
+    const subj = `/CN=${commonName || "localhost"}`;
+    return execFileAsync(
+      "openssl",
+      [
+        "req",
+        "-x509",
+        "-nodes",
+        "-newkey", "rsa:2048",
+        "-keyout", keyPath,
+        "-out", certPath,
+        "-subj", subj,
+        "-days", "365"
+      ]);
+  })
+  .then(() => Promise.all([
+    Fs.readFile(keyPath),
+    Fs.readFile(certPath)
+  ]))
+  .then(([key, cert]) => ({ key, cert }))
+  .catch(e => {
+    console.error("Failed to generate self-signed certificate. Ensure OpenSSL is installed and on your PATH.", e);
+    throw e;
+  });
+}
+
 const DESCRIPTION = [
   "USAGE",
   `\tnode ${path.relative(".", process.argv[1])} [options]`,
@@ -99,7 +135,8 @@ const DESCRIPTION = [
 "\t\tserver - server activity",
 "\t\tusers - user management",
 "\t\tyobot - Yobot AI decisions",
-"\t\tall - all the above"
+"\t\tall - all the above",
+"\t-s, --self-signed <cn> - enable HTTPS with a generated self-signed certificate (provide common name, e.g. localhost; requires OpenSSL)"
 ].join("\n");
 
 const normalizedArgv = [];
@@ -112,7 +149,7 @@ for (let i = 0; i < process.argv.length; i++) {
 }
 
 const go_parser = new getopt.BasicParser(
-  "h:(html)d:(debug)c:(config)",
+  "h:(html)d:(debug)c:(config)s:(self-signed)",
   normalizedArgv);
 
 const options = {};
@@ -123,6 +160,9 @@ while ((option = go_parser.getopt())) {
   case 'd': options.debug = option.optarg; break;
   case 'c': options.config = option.optarg ; break;
   case 'h': options.html_dir = option.optarg; break;
+  case 's':
+    options.selfSigned = option.optarg || "localhost";
+    break;
   }
 }
 if (process.argv.length > go_parser.optind()) {
@@ -148,6 +188,18 @@ if (options.config) {
 }
 
 p.then(json => addDefaults(JSON.parse(json)))
+.then(config => {
+  if (!options.selfSigned)
+    return config;
+  return generateSelfSigned(options.selfSigned || "localhost")
+  .then(pems => {
+    config.https = {
+      key: pems.key,
+      cert: pems.cert
+    };
+    return config;
+  });
+})
 
 .then(config => {
 
@@ -197,12 +249,14 @@ if (config.mail) {
 
   const promises = [];
   if (config.https) {
-    promises.push(
-      Fs.readFile(config.https.key)
-      .then(k => { config.https.key = k; }));
-    promises.push(
-      Fs.readFile(config.https.cert)
-      .then(c => { config.https.cert = c; }));
+    if (config.https.key && typeof config.https.key === "string")
+      promises.push(
+        Fs.readFile(config.https.key)
+        .then(k => { config.https.key = k; }));
+    if (config.https.cert && typeof config.https.cert === "string")
+      promises.push(
+        Fs.readFile(config.https.cert)
+        .then(c => { config.https.cert = c; }));
   }
   return Promise.all(promises)
   .then(() => new Server(config))

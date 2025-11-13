@@ -1530,6 +1530,24 @@ class Game {
   }
 
   /**
+   * Broadcast a notification to all connected players (excluding observers).
+   * @param {string} message notification to send
+   * @param {Object} data payload
+   */
+  notifyPlayers(message, data) {
+    if (message !== Game.Notify.TICK)
+      /* c8 ignore next 2 */
+      if (this._debug)
+        this._debug("b>f players", message, stringify(data));
+    data._timestamp = Date.now();
+    this._channels.forEach(channel => {
+      if (channel.player)
+        channel.emit(message, data);
+      return false;
+    });
+  }
+
+  /**
    * Broadcast a notification to all observers except the
    * given player.
    * @param {Player} player player to exclude

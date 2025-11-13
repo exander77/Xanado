@@ -22,6 +22,12 @@ import Passport from "passport";
 import { Strategy } from "passport-strategy";
 import Path from "path";
 import { fileURLToPath } from 'url';
+import {
+  randomBytes,
+  createCipheriv,
+  pbkdf2Sync,
+  generateKeyPairSync
+} from "crypto";
 const __dirname = Path.dirname(fileURLToPath(import.meta.url));
 
 import { genKey, stringify } from "../common/Utils.js";
@@ -50,6 +56,26 @@ function pw_compare(pw, hash) {
 }
 
 const SESSION_COOKIE = "XANADO.sid";
+
+const CHAT_KEY_VERSION = 1;
+const CHAT_RSA_OPTIONS = {
+  modulusLength: 2048,
+  publicExponent: 0x10001,
+  publicKeyEncoding: {
+    type: "spki",
+    format: "pem"
+  },
+  privateKeyEncoding: {
+    type: "pkcs8",
+    format: "pem"
+  }
+};
+const CHAT_AES_ALGORITHM = "aes-256-gcm";
+const CHAT_AES_KEYLEN = 32;
+const CHAT_AES_IV_BYTES = 12;
+const CHAT_PBKDF2_DIGEST = "sha256";
+const CHAT_PBKDF2_ITERATIONS = 210000;
+const CHAT_PBKDF2_SALT_BYTES = 16;
 
 /**
  * This a Passport strategy, radically cut-down from passport-local.
@@ -171,6 +197,90 @@ class UserManager {
   }
 
   /**
+   * Create a new encrypted chat key bundle for the given password.
+   * @param {string} password plaintext password used to wrap the private key
+   * @return {object|undefined} encryption bundle
+   * @private
+   */
+  createEncryptedChatKeys(password) {
+    if (typeof password !== "string" || password.length === 0)
+      return undefined;
+    const { publicKey, privateKey } = generateKeyPairSync(
+      "rsa",
+      CHAT_RSA_OPTIONS);
+    const salt = randomBytes(CHAT_PBKDF2_SALT_BYTES);
+    const iv = randomBytes(CHAT_AES_IV_BYTES);
+    const derived = pbkdf2Sync(
+      password,
+      salt,
+      CHAT_PBKDF2_ITERATIONS,
+      CHAT_AES_KEYLEN,
+      CHAT_PBKDF2_DIGEST);
+    const cipher = createCipheriv(CHAT_AES_ALGORITHM, derived, iv);
+    const encrypted = Buffer.concat([
+      cipher.update(privateKey, "utf8"),
+      cipher.final()
+    ]);
+    const tag = cipher.getAuthTag();
+    return {
+      version: CHAT_KEY_VERSION,
+      publicKey,
+      privateKey: {
+        algorithm: CHAT_AES_ALGORITHM,
+        ciphertext: encrypted.toString("base64"),
+        tag: tag.toString("base64"),
+        iv: iv.toString("base64"),
+        pbkdf2: {
+          salt: salt.toString("base64"),
+          iterations: CHAT_PBKDF2_ITERATIONS,
+          digest: CHAT_PBKDF2_DIGEST,
+          keylen: CHAT_AES_KEYLEN
+        }
+      }
+    };
+  }
+
+  /**
+   * Ensure the given user object has chat keys, generating them if necessary.
+   * @param {object} userObject user record (from DB)
+   * @param {string} password plaintext password to wrap the key with
+   * @param {boolean} persist true to persist immediately
+   * @return {Promise<object>} resolves to the user object
+   * @private
+   */
+  ensureChatKeys(userObject, password, persist = true) {
+    const hasKeys = userObject
+          && userObject.encryption
+          && userObject.encryption.publicKey
+          && userObject.encryption.privateKey;
+    if (hasKeys || typeof password !== "string" || password.length === 0)
+      return Promise.resolve(userObject);
+    const bundle = this.createEncryptedChatKeys(password);
+    if (!bundle)
+      return Promise.resolve(userObject);
+    userObject.encryption = bundle;
+    return persist ? this.writeDB().then(() => userObject)
+      : Promise.resolve(userObject);
+  }
+
+  /**
+   * Return a redacted copy of the encryption bundle suitable for sending
+   * to the browser.
+   * @param {object} encryption stored encryption object
+   * @return {object|undefined} safe copy of the encryption block
+   * @private
+   */
+  redactEncryption(encryption) {
+    if (!encryption)
+      return undefined;
+    return {
+      version: encryption.version,
+      publicKey: encryption.publicKey,
+      privateKey: encryption.privateKey
+    };
+  }
+
+  /**
    * Construct, adding relevant routes to the given Express application
    * @param {object} config system configuration object
    * @param {object} config.auth optional authentication options
@@ -278,6 +388,10 @@ class UserManager {
       "/users",
       (req, res) => this.GET_users(req, res));
 
+    app.get(
+      "/public-keys",
+      (req, res) => this.GET_public_keys(req, res));
+
     // Log in a user
     app.post(
       "/signin",
@@ -285,7 +399,12 @@ class UserManager {
         // Assign this property in req
         assignProperty: "userObject"
       }),
-      (req, res) => this.POST_signin(req, res));
+      (req, res) => {
+        const pw = req.body ? req.body.signin_password : undefined;
+        return this.ensureChatKeys(req.userObject, pw)
+        .catch(e => console.error("Failed to prepare chat keys", e))
+        .then(() => this.POST_signin(req, res));
+      });
 
     /* c8 ignore start */
     app.get(
@@ -695,6 +814,9 @@ class UserManager {
     .then(() => {
       if (!desc.key)
         desc.key = genKey(this.db.map(f => f.key));
+      const plain = desc.pass;
+      if (typeof plain === "string" && plain.length > 0)
+        desc.encryption = this.createEncryptedChatKeys(plain);
       return pw_hash(desc.pass);
     })
     .then(pw => {
@@ -748,8 +870,9 @@ class UserManager {
         provider: "xanado",
         pass: pass
       })
-      .then(userObject => this.passportLogin(req, res, userObject))
-      .then(() => this.GET_session(req, res));
+      .then(userObject =>
+        this.passportLogin(req, res, userObject)
+        .then(() => this.GET_session(req, res)));
     });
   }
 
@@ -795,18 +918,53 @@ class UserManager {
   }
 
   /**
+   * Expose public keys for the requested users.
+   * @param {Request} req expects `keys` query parameter containing a comma
+   * separated list of user keys.
+   * @param {Response} res response object
+   * @private
+   */
+  GET_public_keys(req, res) {
+    if (!req.isAuthenticated())
+      return this.sendResult(res, 401, [ "Not signed in" ]);
+    const param = req.query && req.query.keys;
+    let requested = [];
+    if (Array.isArray(param))
+      requested = param;
+    else if (typeof param === "string")
+      requested = param.split(",");
+    requested = requested
+    .map(k => `${k}`.trim())
+    .filter((k, idx, arr) => k.length > 0 && arr.indexOf(k) === idx);
+    if (requested.length === 0)
+      return this.sendResult(res, 200, {});
+    return this.getDB()
+    .then(db => {
+      const map = {};
+      requested.forEach(key => {
+        const uo = db.find(user => user.key === key);
+        if (uo && uo.encryption && uo.encryption.publicKey)
+          map[key] = uo.encryption.publicKey;
+      });
+      this.sendResult(res, 200, map);
+    });
+  }
+
+  /**
    * Handle XANADO signin.
    * @param {Request} req The body of the request
    * must contain `signin_username` and `signin_password`
    * fields. BasicAuth is NOT supported.
    * @param {Response} res response
    * @private
-   */
+  */
   POST_signin(req, res) {
     // error in passport will -> 401
     req.userObject.provider = "xanado";
+    const plain = req.body ? req.body.signin_password : undefined;
+    return this.ensureChatKeys(req.userObject, plain)
     // Have to call .signin or the cookie doesn't get set
-    return this.passportLogin(req, res, req.userObject)
+    .then(() => this.passportLogin(req, res, req.userObject))
     .then(() => this.sendResult(res, 200, []));
   }
 
@@ -828,10 +986,17 @@ class UserManager {
         this.debug("UserManager: changing pw for",
                    userObject.name, userObject.key);
       return pw_hash(pass)
-      .then(pass => userObject.pass = pass)
+      .then(hash => {
+        userObject.pass = hash;
+        const bundle = this.createEncryptedChatKeys(pass);
+        if (bundle)
+          userObject.encryption = bundle;
+      })
       .then(() => this.getUser(userObject))
       .then(uo => {
         uo.pass = userObject.pass;
+        if (userObject.encryption)
+          uo.encryption = userObject.encryption;
       })
       .then(() => this.writeDB())
       .then(() => this.sendResult(res, 200, [
@@ -909,7 +1074,8 @@ class UserManager {
         name: req.user.name,
         provider: req.user.provider,
         key: req.user.key,
-        settings: req.user.settings
+        settings: req.user.settings,
+        encryption: this.redactEncryption(req.user.encryption)
       });
     return this.sendResult(res, 401, [ "Not signed in" ]);
   }

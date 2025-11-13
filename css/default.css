@@ -1087,6 +1087,19 @@ body.games-ui {
   float: right;
 }
 
+#client_toolbox span, #client_toolbox a {
+  cursor: pointer;
+}
+
+#homeLink {
+  width: 1.5em;
+  height: 1.5em;
+  display: inline-block;
+  background: url("../images/home.svg") no-repeat center center;
+  background-size: contain;
+  margin-right: 0.4em;
+}
+
 /* This took a lot of faffing around to get right! */
 button.hide-password {
   position: absolute; /* within containing block */

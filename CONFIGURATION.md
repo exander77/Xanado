@@ -35,9 +35,15 @@ the following fields:
     + `allowTakeBack` : Whether or not to allow players to take back their most recent move without penalty, so long as the next player hasn't challenged or played. Default is `true`.
 + `games` : Path to the directory where games files will be stored,
   relative to the root of the installation. Defaults to `games`.
-+ `chats` : Path to the directory where per-game chat transcripts are stored
-  (defaults to `chats`). Removing the files from this directory is enough to
-  purge old chat history.
++ `chats` : Path to the directory where per-game chat transcripts are stored as
+  newline-delimited JSON (`*.ndjson`, defaults to `chats`). Removing the files
+  from this directory is enough to purge old chat history.
++ `sessions` : Path to the directory where session state (including cookies)
+  is stored. Defaults to `sessions`. Point this at a persistent location if
+  you run multiple instances or want session cookies to survive restarts.
++ `chat_history_limit` : Maximum number of chat messages replayed for a game.
+  Defaults to `-1` (unlimited). Set to a positive number to keep only the most
+  recent messages, or `0` to disable chat persistence entirely.
 + `ai` : Optional configuration for AI-enabled robots such as Yobot.
   + `openai_key` : API key used to call OpenAI compatible chat models. If
     omitted, Yobot cannot be added to games.

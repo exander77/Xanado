@@ -245,7 +245,35 @@ const GameUIMixin = superclass => class extends superclass {
    * @private
    */
   handle_MESSAGE(message) {
+    this._chatDecryptQueue = (this._chatDecryptQueue || Promise.resolve())
+    .then(() => this.processChatMessage(message))
+    .catch(e => console.error("Chat processing failed", e));
+  }
+
+  processChatMessage(message) {
     this.debug("f<b message");
+    if (!message.encrypted) {
+      this.renderChatMessage(message);
+      return Promise.resolve();
+    }
+    const recipientKey = this.session && this.session.key;
+    const canDecrypt = recipientKey
+          && this.chatCrypto
+          && this.chatCrypto.hasMaterial
+          && message.recipients
+          && message.recipients[recipientKey];
+    if (!canDecrypt) {
+      this.renderEncryptedPlaceholder(message);
+      return Promise.resolve();
+    }
+    return this.ensureChatUnlocked(true)
+    .then(() => this.chatCrypto.decrypt(message))
+    .then(text => this.renderChatMessage(
+      Object.assign({}, message, { text: text })))
+    .catch(() => this.renderEncryptedPlaceholder(message));
+  }
+
+  renderChatMessage(message) {
     let args = [ message.text ];
     if (typeof message.args === "string")
       args.push(message.args);
@@ -269,14 +297,170 @@ const GameUIMixin = superclass => class extends superclass {
     const interactive = !message.history;
     this.$chat(interactive, $mess);
 
-    // Special handling for _hint_, highlight square
     if (message.sender === "Advisor"
         && message.text === "_hint_") {
-      // args[0] is "_hint_, args[1] is "words" string, args[2] is row,
-      // args[3] is col, args[4] is score
       let row = args[2] - 1, col = args[3] - 1;
       $(`#Board_${col}x${row}`).addClass("hint-placement");
     }
+  }
+
+  renderEncryptedPlaceholder(message) {
+    const sender = message.sender || "Unknown";
+    const $pn = $(document.createElement("span")).addClass("chat-sender");
+    $pn.text(sender);
+    const $mess = $(document.createElement("div"))
+          .addClass("chat-message")
+          .addClass("locked");
+    if (message.classes)
+      $mess.addClass(message.classes);
+    $mess.append($pn).append(": ");
+    const warning = "Encrypted message (unlock chat to view)";
+    const $msg = $(document.createElement("span"))
+          .addClass("chat-text")
+          .addClass("locked")
+          .text(warning);
+    $mess.append($msg);
+    this.$chat(!message.history, $mess);
+  }
+
+  isChatCommand(text) {
+    const trimmed = (text || "").trim().toLowerCase();
+    return trimmed === "hint"
+      || trimmed === "advise"
+      || trimmed === "autoplay"
+      || /^allow\s+/i.test(text || "");
+  }
+
+  chatEncryptionAvailable() {
+    return !!(this.chatCrypto
+              && typeof this.chatCrypto.isSupported === "function"
+              && this.chatCrypto.isSupported()
+              && typeof this.chatCrypto.hasMaterial === "function"
+              && this.chatCrypto.hasMaterial());
+  }
+
+  getChatRecipientKeys() {
+    if (!this.game || typeof this.game.getPlayers !== "function")
+      return [];
+    const keys = this.game.getPlayers()
+          .map(player => player && player.key)
+          .filter(key => typeof key === "string");
+    return Array.from(new Set(keys));
+  }
+
+  ensureRecipientPublicKeys(keys) {
+    if (!Array.isArray(keys) || keys.length === 0)
+      return Promise.resolve({});
+    this._publicKeyCache = this._publicKeyCache || new Map();
+    const missing = keys.filter(key => key && !this._publicKeyCache.has(key));
+    const fetcher = missing.length > 0
+          ? $.get("/public-keys", { keys: missing.join(",") })
+          : Promise.resolve({});
+    return fetcher
+    .then(response => {
+      Object.entries(response || {}).forEach(([key, value]) => {
+        if (value)
+          this._publicKeyCache.set(key, value);
+      });
+      const resolved = {};
+      keys.forEach(key => {
+        if (this._publicKeyCache.has(key))
+          resolved[key] = this._publicKeyCache.get(key);
+      });
+      return resolved;
+    })
+    .catch(e => {
+      console.error("Failed to fetch public keys", e);
+      return {};
+    });
+  }
+
+  ensureChatUnlocked(interactive) {
+    if (!this.chatCrypto || !this.chatEncryptionAvailable())
+      return Promise.reject(new Error("chat crypto unavailable"));
+    const ready = this.chatCryptoReady
+          ? this.chatCryptoReady.catch(() => false)
+          : Promise.resolve(false);
+    return ready.then(() => {
+      if (this.chatCrypto.hasUnlockedKey && this.chatCrypto.hasUnlockedKey())
+        return;
+      return this.chatCrypto.loadFromStorage()
+      .then(loaded => {
+        if (loaded)
+          this.chatCryptoReady = Promise.resolve(true);
+        if (loaded || (this.chatCrypto.hasUnlockedKey && this.chatCrypto.hasUnlockedKey()))
+          return;
+        if (!interactive || typeof window === "undefined")
+          throw new Error("locked");
+        const password = window.prompt("Enter your password to unlock chat");
+        if (!password)
+          throw new Error("locked");
+        return this.chatCrypto.unlockWithPassword(password)
+        .then(result => {
+          if (result)
+            this.chatCryptoReady = Promise.resolve(true);
+          return result;
+        });
+      });
+    });
+  }
+
+  sendPlainChat(text) {
+    this.notifyBackend(Game.Notify.MESSAGE, {
+      sender: this.player ? this.player.name : "Observer",
+      senderKey: this.player ? this.player.key : undefined,
+      text: text
+    });
+  }
+
+  sendChatMessage(text) {
+    if (!text)
+      return Promise.resolve();
+    if (!this.player) {
+      this.$log(true, "Only players can send chat messages");
+      return Promise.resolve();
+    }
+    let message = text.trim();
+    const forcedPublic = /^\/public\b/i.test(message);
+    if (forcedPublic)
+      message = message.replace(/^\/public\b\s*/i, "").trim();
+    if (!message)
+      return Promise.resolve();
+    if (this.isChatCommand(message)
+        || forcedPublic
+        || !this.chatEncryptionAvailable()) {
+      this.sendPlainChat(message);
+      return Promise.resolve();
+    }
+    const recipientKeys = this.getChatRecipientKeys();
+    if (recipientKeys.length === 0) {
+      this.sendPlainChat(message);
+      return Promise.resolve();
+    }
+    return this.ensureRecipientPublicKeys(recipientKeys)
+    .then(map => {
+      const available = {};
+      recipientKeys.forEach(key => {
+        if (map[key])
+          available[key] = map[key];
+      });
+      if (Object.keys(available).length === 0)
+        throw new Error("No recipients have public keys");
+      const missing = recipientKeys.filter(key => !map[key]);
+      if (missing.length > 0)
+        console.warn("Encrypting chat without keys for", missing.join(", "));
+      return this.chatCrypto.encrypt(message, available)
+      .then(payload => {
+        payload.sender = this.player.name;
+        payload.senderKey = this.player.key;
+        this.notifyBackend(Game.Notify.MESSAGE, payload);
+      });
+    })
+    .catch(e => {
+      console.error("Failed to send encrypted chat", e);
+      this.$log(true, "Unable to send encrypted chat message");
+      throw e;
+    });
   }
 
   /**
@@ -1181,19 +1365,25 @@ const GameUIMixin = superclass => class extends superclass {
 
     super.attachUIEventHandlers();
 
+    this._chatDecryptQueue = Promise.resolve();
+    this._publicKeyCache = this._publicKeyCache || new Map();
+
     // Configure chat input
     const ui = this;
     const sendChat = ($input, keepFocus) => {
       const text = $input.val().trim();
       if (!text)
         return;
-      ui.notifyBackend(Game.Notify.MESSAGE, {
-        sender: ui.player ? ui.player.name : "Observer",
-        text: text
-      });
       $input.val("");
-      if (keepFocus)
-        $input.focus();
+      Promise.resolve(ui.sendChatMessage(text))
+      .catch(e => {
+        console.error("Failed to send chat", e);
+        ui.$log(true, "Failed to send chat message");
+      })
+      .finally(() => {
+        if (keepFocus)
+          $input.focus();
+      });
     };
 
     $("#chatInput")

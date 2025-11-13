@@ -25,7 +25,7 @@ import { UserManager } from "./UserManager.js";
 import { genKey } from "../common/Utils.js";
 
 const Player = BackendGame.CLASSES.Player;
-const CHAT_HISTORY_LIMIT = 500;
+const CHAT_HISTORY_LIMIT_DEFAULT = -1; // unlimited
 
 function hasDebug(config, flag) {
   if (config && config.debugSet instanceof Set) {
@@ -125,6 +125,20 @@ class Server {
     this.chatWrites = new Map();
     Fs.mkdir(this.chatDir, { recursive: true })
     .catch(e => console.error("Failed to ensure chat directory", this.chatDir, e));
+
+    const sessionsDirConfig = config.sessions
+          || Path.join(staticRoot, "sessions");
+    this.sessionsDir = Path.isAbsolute(sessionsDirConfig)
+      ? sessionsDirConfig : Path.join(staticRoot, sessionsDirConfig);
+    UserManager.SESSIONS_DIR = this.sessionsDir;
+    Fs.mkdir(this.sessionsDir, { recursive: true })
+    .catch(e => console.error("Failed to ensure sessions directory", this.sessionsDir, e));
+
+    const configuredHistoryLimit = Number(config.chat_history_limit);
+    this.chatHistoryLimit = Number.isFinite(configuredHistoryLimit)
+      ? configuredHistoryLimit
+      : CHAT_HISTORY_LIMIT_DEFAULT;
+    this.chatLegacyConverted = new Set();
 
     // Add a couple of dynamically computed defaults that need to
     // be sent with /defaults/:user
@@ -492,12 +506,16 @@ class Server {
 
     if (!socket.game)
       return;
+    if (!socket.player)
+      return;
 
     // Chat message
     /* c8 ignore next 2 */
     if (this.debug)
       this.debug("f>s message", message);
-    const mess = message.text.split(/\s+/);
+    const plainText = typeof message.text === "string"
+          ? message.text.trim() : "";
+    const mess = plainText.split(/\s+/);
     const verb = mess[0];
 
     switch (verb) {
@@ -526,7 +544,10 @@ class Server {
       break;
 
     default:
-      socket.game.notifyAll(BackendGame.Notify.MESSAGE, message);
+      if (message.encrypted || message.playersOnly)
+        socket.game.notifyPlayers(BackendGame.Notify.MESSAGE, message);
+      else
+        socket.game.notifyAll(BackendGame.Notify.MESSAGE, message);
       this.appendChatMessage(socket.game.key, message);
     }
   }
@@ -557,15 +578,94 @@ class Server {
     this.monitors.forEach(socket => socket.emit(BackendGame.Notify.UPDATE));
   }
 
-  chatFile(gameKey) {
-    return Path.join(this.chatDir, `${gameKey}.json`);
+  chatFile(gameKey, legacy = false) {
+    const ext = legacy ? "json" : "ndjson";
+    return Path.join(this.chatDir, `${gameKey}.${ext}`);
+  }
+
+  ensureChatFileFormat(gameKey) {
+    if (!this.chatDir || this.chatLegacyConverted.has(gameKey))
+      return Promise.resolve();
+    const ndjsonPath = this.chatFile(gameKey);
+    return Fs.access(ndjsonPath)
+    .then(() => {})
+    .catch(err => {
+      if (err.code !== "ENOENT")
+        throw err;
+      const legacyPath = this.chatFile(gameKey, true);
+      return Fs.readFile(legacyPath, "utf8")
+      .then(data => {
+        const trimmed = (data || "").trim();
+        if (!trimmed || trimmed[0] !== "[")
+          return;
+        let legacy = [];
+        try {
+          legacy = JSON.parse(trimmed);
+          if (!Array.isArray(legacy))
+            legacy = [];
+        } catch (e) {
+          console.error("Failed to parse legacy chat history", gameKey, e);
+          return;
+        }
+        const limit = this.chatHistoryLimit;
+        if (limit > 0 && legacy.length > limit)
+          legacy = legacy.slice(legacy.length - limit);
+        const lines = legacy.map(entry => JSON.stringify(entry));
+        const payload = lines.length ? `${lines.join("\n")}\n` : "";
+        return Fs.writeFile(ndjsonPath, payload)
+        .then(() => Fs.unlink(legacyPath).catch(() => {}));
+      })
+      .catch(e => {
+        if (e.code !== "ENOENT")
+          console.error("Failed to convert legacy chat history", gameKey, e);
+      });
+    })
+    .catch(e => {
+      if (e.code !== "ENOENT")
+        console.error("Failed to ensure chat history format", gameKey, e);
+    })
+    .finally(() => this.chatLegacyConverted.add(gameKey));
   }
 
   loadChatHistory(gameKey) {
     if (!this.chatDir)
       return Promise.resolve([]);
-    return Fs.readFile(this.chatFile(gameKey), "utf8")
-    .then(data => JSON.parse(data))
+    if (this.chatHistoryLimit === 0)
+      return Promise.resolve([]);
+    const pending = this.chatWrites.get(gameKey) || Promise.resolve();
+    return pending
+    .catch(() => {})
+    .then(() => this.ensureChatFileFormat(gameKey))
+    .then(() => Fs.readFile(this.chatFile(gameKey), "utf8"))
+    .then(data => {
+      const trimmed = (data || "").trim();
+      if (!trimmed)
+        return [];
+      if (trimmed[0] === "[") {
+        // Legacy file that couldn't be converted (e.g. parse failure)
+        try {
+          const parsed = JSON.parse(trimmed);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          console.error("Failed to parse chat history", gameKey, e);
+          return [];
+        }
+      }
+      const lines = data.split("\n")
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+      const limit = this.chatHistoryLimit;
+      const recent = limit > 0 ? lines.slice(-limit) : lines;
+      const entries = [];
+      recent.forEach(line => {
+        try {
+          entries.push(JSON.parse(line));
+        } catch (e) {
+          console.error("Failed to parse chat line", gameKey, line, e);
+        }
+      });
+      return entries;
+    })
     .catch(e => {
       if (e.code === "ENOENT")
         return [];
@@ -577,25 +677,32 @@ class Server {
   appendChatMessage(gameKey, message) {
     if (!this.chatDir || !gameKey || !message)
       return Promise.resolve();
+    if (this.chatHistoryLimit === 0)
+      return Promise.resolve();
     const entry = {
       sender: message.sender,
-      text: message.text,
-      args: message.args,
+      senderKey: message.senderKey,
       classes: message.classes,
       timestamp: message.timestamp || message._timestamp || Date.now()
     };
+    if (message.encrypted) {
+      entry.encrypted = true;
+      entry.version = message.version || 1;
+      entry.algorithm = message.algorithm;
+      entry.iv = message.iv;
+      entry.ciphertext = message.ciphertext;
+      entry.recipients = message.recipients;
+      entry.playersOnly = true;
+    } else {
+      entry.text = message.text;
+      entry.args = message.args;
+    }
+    const line = `${JSON.stringify(entry)}\n`;
     const chain = (this.chatWrites.get(gameKey) || Promise.resolve())
     .catch(() => {})
-    .then(() => this.loadChatHistory(gameKey)
-          .then(history => {
-            history.push(entry);
-            if (history.length > CHAT_HISTORY_LIMIT)
-              history = history.slice(history.length - CHAT_HISTORY_LIMIT);
-            return Fs.writeFile(
-              this.chatFile(gameKey),
-              JSON.stringify(history, null, 2));
-          })
-          .catch(e => console.error("Failed to persist chat", gameKey, e)));
+    .then(() => this.ensureChatFileFormat(gameKey))
+    .then(() => Fs.appendFile(this.chatFile(gameKey), line))
+    .catch(e => console.error("Failed to persist chat", gameKey, e));
     const tracked = chain.finally(() => {
       if (this.chatWrites.get(gameKey) === tracked)
         this.chatWrites.delete(gameKey);
@@ -605,7 +712,7 @@ class Server {
   }
 
   sendChatHistory(socket, gameKey) {
-    if (!socket || !gameKey)
+    if (!socket || !gameKey || !socket.player)
       return Promise.resolve();
     return this.loadChatHistory(gameKey)
     .then(history => {

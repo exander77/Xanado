@@ -47,7 +47,7 @@ describe("server/UserManager", () => {
   beforeEach(
     () => {
       return tmp.dir()
-      .then(d => UserManager.SESSIONS_DIR = d.path)
+      .then(d => config.sessions = d.path)
       .then(() => tmp.file())
       .then(o => config.auth.db_file = o.path)
       .then(() => tmp.dir())
@@ -420,6 +420,42 @@ describe("server/UserManager", () => {
     .then(res => {
       assert.equal(res.status, 401);
       // NO! assert.deepEqual(res.body, ["Not signed in"]);
+    });
+  });
+  it("exposes public keys for encrypted chat", () => {
+    const server = new Server(config);
+    const creds = {
+      register_username: "cipher_user",
+      register_password: "cipher-pass",
+      register_email: "cipher@example.com"
+    };
+    let cookie, playerKey;
+    return register(server, creds)
+    .then(createdKey => {
+      playerKey = createdKey;
+      return signin(server, {
+        signin_username: creds.register_username,
+        signin_password: creds.register_password
+      });
+    })
+    .then(c => {
+      cookie = c;
+      return chai.request(server.express)
+      .get("/session")
+      .set("Cookie", cookie);
+    })
+    .then(res => {
+      assert.equal(res.status, 200);
+      assert(res.body.encryption);
+      assert(res.body.encryption.publicKey);
+      assert(res.body.encryption.privateKey);
+    })
+    .then(() => chai.request(server.express)
+          .get(`/public-keys?keys=${playerKey}`)
+          .set("Cookie", cookie))
+    .then(res => {
+      assert.equal(res.status, 200);
+      assert(res.body[playerKey]);
     });
   });
 });

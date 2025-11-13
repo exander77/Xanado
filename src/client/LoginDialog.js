@@ -5,6 +5,7 @@
 
 import { Dialog } from "../browser/Dialog.js";
 import { PasswordMixin } from "./PasswordMixin.js";
+import { CHAT_PASSWORD_CACHE_KEY } from "../browser/chat/ChatCrypto.js";
 
 /**
  * @extends Dialog
@@ -14,7 +15,9 @@ class LoginDialog extends PasswordMixin(Dialog) {
 
   constructor(options) {
     options.onSubmit = () => {
-      this.options.postAction = this.getAction();
+      const action = this.getAction();
+      this.options.postAction = action;
+      this.cachePasswordForAction(action);
     };
     super("LoginDialog", $.extend({
       title: $.i18n("Sign in")
@@ -29,6 +32,20 @@ class LoginDialog extends PasswordMixin(Dialog) {
               && user !== $.i18n("Robot"));
     }
     return true;
+  }
+
+  cachePasswordForAction(action) {
+    if (typeof window === "undefined" || !window.sessionStorage)
+      return;
+    let value = "";
+    if (action === "/signin")
+      value = this.$dlg.find("#signin_password").val();
+    else if (action === "/register")
+      value = this.$dlg.find("#register_password").val();
+    if (typeof value === "string" && value.length > 0)
+      window.sessionStorage.setItem(CHAT_PASSWORD_CACHE_KEY, value);
+    else
+      window.sessionStorage.removeItem(CHAT_PASSWORD_CACHE_KEY);
   }
 
   getAction() {
@@ -82,6 +99,12 @@ class LoginDialog extends PasswordMixin(Dialog) {
                  .append($table)
                  .append(`<br /><div class="sign-in-using">${$.i18n("text-or-xanado")}</div>`));
       });
+    })
+    .then(() => {
+      const $firstField = this.$dlg.find("#signin-tab input, #register-tab input, #reset-password-tab input")
+            .filter(":visible:enabled").first();
+      if ($firstField.length)
+        $firstField.trigger("focus");
     });
   }
 }

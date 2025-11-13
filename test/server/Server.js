@@ -48,7 +48,7 @@ describe("server/Server.js", () => {
   beforeEach(
     () => {
       return tmp.dir()
-      .then(d => UserManager.SESSIONS_DIR = d.path)
+      .then(d => CONFIG.sessions = d.path)
       .then(() => tmp.file())
       .then(o => CONFIG.auth.db_file = o.path)
       .then(() => tmp.dir())

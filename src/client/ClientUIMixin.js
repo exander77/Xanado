@@ -23,6 +23,7 @@ import { Game } from "../game/Game.js";
 import { Turn } from "../game/Turn.js";
 import { Tile } from "../game/Tile.js";
 import { UI } from "../browser/UI.js";
+import { ChatCrypto, CHAT_PASSWORD_CACHE_KEY } from "../browser/chat/ChatCrypto.js";
 
 /**
  * Mixin with common code shared between client game and games interfaces
@@ -42,6 +43,9 @@ const ClientUIMixin = superclass => class extends superclass {
    * @member {object}
    */
   session = undefined;
+
+  chatCryptoReady = Promise.resolve(false);
+  i18nReady = false;
 
   /**
    * Cache of defaults objects (.user and .game)
@@ -77,6 +81,61 @@ const ClientUIMixin = superclass => class extends superclass {
    */
   promiseLayouts() {
     return $.get("/css");
+  }
+
+  /**
+   * Initialise client-side chat crypto using the current session.
+   */
+  initialiseChatCrypto() {
+    if (typeof window === "undefined") {
+      this.chatCryptoReady = Promise.resolve(false);
+      return;
+    }
+    if (!this.session || !this.session.encryption) {
+      this.chatCryptoReady = Promise.resolve(false);
+      return;
+    }
+    this.chatCrypto = new ChatCrypto(this.session);
+    const cached = window.sessionStorage
+          && window.sessionStorage.getItem(CHAT_PASSWORD_CACHE_KEY);
+    if (cached) {
+      window.sessionStorage.removeItem(CHAT_PASSWORD_CACHE_KEY);
+      this.chatCryptoReady = this.chatCrypto.unlockWithPassword(cached)
+      .then(() => true)
+      .catch(e => {
+        console.error("Failed to unlock chat key", e);
+        this.notifyChatKeyIssue("Unable to unlock chat key. You will be prompted for your password again.");
+        return false;
+      });
+    } else
+      this.chatCryptoReady = this.chatCrypto.loadFromStorage()
+      .then(loaded => {
+        if (!loaded)
+          this.notifyChatKeyIssue("Chat key could not be cached. Expect to re-enter your password.");
+        return !!loaded;
+      })
+      .catch(e => {
+        console.error("Failed to load cached chat key", e);
+        this.notifyChatKeyIssue("Failed to restore encrypted chat key. You'll be asked for your password again.");
+        return false;
+      });
+  }
+
+  notifyChatKeyIssue(message) {
+    if (typeof message !== "string" || message.length === 0)
+      return;
+    if (!this.i18nReady || typeof $.i18n !== "function") {
+      // i18n / UI subsystem not ready yet; fall back to native alert
+      window.alert(message);
+      return;
+    }
+    let title = "Chat security";
+    try {
+      title = $.i18n("Chat security");
+    } catch (e) {
+      // fall back to plain text
+    }
+    this.alert(new Error(message), title);
   }
 
   /**
@@ -168,6 +227,9 @@ const ClientUIMixin = superclass => class extends superclass {
     })
     .then(() => this.initTheme())
     .then(() => this.initLocale())
+    .then(() => {
+      this.i18nReady = true;
+    })
     .then(() => this.processArguments(this.args))
     // Unit tests predefine this.channel so that io can be bypassed
     .then(() => this.channel = (this.channel || io().connect()))
@@ -195,6 +257,10 @@ const ClientUIMixin = superclass => class extends superclass {
         })
         .catch(e => this.alert(e, $.i18n("failed", $.i18n("Sign out"))))
         .then(() => {
+          if (this.chatCrypto)
+            this.chatCrypto.lock();
+          this.chatCrypto = undefined;
+          this.chatCryptoReady = Promise.resolve(false);
           this.session = undefined;
           this.refresh();
         });
@@ -300,6 +366,7 @@ const ClientUIMixin = superclass => class extends superclass {
       .first()
       .text(session.name);
       this.session = session;
+      this.initialiseChatCrypto();
       return session;
     })
     .catch(() => {
@@ -414,3 +481,7 @@ const ClientUIMixin = superclass => class extends superclass {
 };
 
 export { ClientUIMixin }
+      $("#homeLink")
+      .on("click", () => {
+        window.location.href = "/";
+      });
