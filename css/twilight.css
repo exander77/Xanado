@@ -1,0 +1,57 @@
+/* MIT License, The Xanado Project */
+/* Twilight palette: deep purples and midnight blues */
+
+.Surface .underlay:before {
+  content: attr(data-short);
+}
+
+.Surface td {
+  border-color: #4a3f57;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #7541c9;
+  border-color: #5420a1;
+  color: #f5f0ff;
+}
+
+.Surface td.square-T {
+  background-color: #e05c9b;
+  border-color: #b53073;
+  color: #fff0f6;
+}
+
+.Surface td.square-Q {
+  background-color: #a230f0;
+  border-color: #6a16b5;
+  color: #fef0ff;
+}
+
+.Surface td.square-d {
+  background-color: #3fa0f5;
+  border-color: #1d6eb8;
+  color: #e9f6ff;
+}
+
+.Surface td.square-t {
+  background-color: #f1b04d;
+  border-color: #c57b1e;
+  color: #33210a;
+}
+
+.Surface td.square-q {
+  background-color: #1f9b84;
+  border-color: #147361;
+  color: #e6fffa;
+}
+
+.Surface td.square-_ {
+  background-color: #2f2a38;
+}
+
+.Tile {
+  background-color: #f6e9ff !important;
+  border-color: #ac8be5 !important;
+  color: #2f2443 !important;
+}

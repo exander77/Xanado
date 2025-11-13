@@ -1,0 +1,57 @@
+/* MIT License, The Xanado Project */
+/* Emerald palette: crisp greens and charcoal contrasts */
+
+.Surface .underlay:before {
+  content: attr(data-short);
+}
+
+.Surface td {
+  border-color: #3c5b4e;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #2bae66;
+  border-color: #1c7545;
+  color: #f2fff6;
+}
+
+.Surface td.square-T {
+  background-color: #f0c808;
+  border-color: #bd9a04;
+  color: #392b00;
+}
+
+.Surface td.square-Q {
+  background-color: #37b1d9;
+  border-color: #1f7ea1;
+  color: #022331;
+}
+
+.Surface td.square-d {
+  background-color: #8be8a7;
+  border-color: #4ec87a;
+  color: #0f2a1c;
+}
+
+.Surface td.square-t {
+  background-color: #ff8e72;
+  border-color: #e05d41;
+  color: #32160e;
+}
+
+.Surface td.square-q {
+  background-color: #1d6f50;
+  border-color: #11402d;
+  color: #e6fff3;
+}
+
+.Surface td.square-_ {
+  background-color: #223329;
+}
+
+.Tile {
+  background-color: #f3fff7 !important;
+  border-color: #62c28d !important;
+  color: #0f291b !important;
+}

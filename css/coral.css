@@ -1,0 +1,57 @@
+/* MIT License, The Xanado Project */
+/* Coral palette: warm sand and seafoam accents */
+
+.Surface .underlay:before {
+  content: attr(data-short);
+}
+
+.Surface td {
+  border-color: #d9a38f;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #ff916d;
+  border-color: #e46b46;
+  color: #352015;
+}
+
+.Surface td.square-T {
+  background-color: #ff5c74;
+  border-color: #d92445;
+  color: #fff1f4;
+}
+
+.Surface td.square-Q {
+  background-color: #f24c3d;
+  border-color: #ba291f;
+  color: #ffeae2;
+}
+
+.Surface td.square-d {
+  background-color: #ffd590;
+  border-color: #e8ad4d;
+  color: #3a2507;
+}
+
+.Surface td.square-t {
+  background-color: #9cd9c2;
+  border-color: #61b391;
+  color: #0f2a22;
+}
+
+.Surface td.square-q {
+  background-color: #6ab8dd;
+  border-color: #2e8ab0;
+  color: #07202c;
+}
+
+.Surface td.square-_ {
+  background-color: #fdebdc;
+}
+
+.Tile {
+  background-color: #fffaf3 !important;
+  border-color: #f4b996 !important;
+  color: #3b2215 !important;
+}
