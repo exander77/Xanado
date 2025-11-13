@@ -430,6 +430,8 @@ class UserManager {
    * @return {Promise} resolve to user object, or throw
    */
   getUser(desc, ignorePass) {
+    const requestedName =
+          (typeof desc.name === "string") ? desc.name.toLowerCase() : undefined;
     return this.getDB()
     .then(db => {
       if (typeof desc.key !== "undefined") {
@@ -447,8 +449,9 @@ class UserManager {
           .then(() => uo);
         }
 
-        if (typeof desc.name !== "undefined"
-            && uo.name === desc.name) {
+        if (typeof requestedName !== "undefined"
+            && typeof uo.name === "string"
+            && uo.name.toLowerCase() === requestedName) {
 
           if (ignorePass)
             return uo;
@@ -919,10 +922,14 @@ class UserManager {
    */
   POST_session_settings(req, res) {
     if (req.user) {
-      req.user.settings = req.body;
+      const incoming = Object.assign({}, req.body || {});
+      if (typeof incoming.language !== "string"
+          || incoming.language.trim() === "")
+        incoming.language = "en";
+      req.user.settings = incoming;
       return this.getUser(req.user)
       .then(user => {
-        user.settings = req.body;
+        user.settings = incoming;
         /* c8 ignore next 2 */
         if (this.debug)
           this.debug("UserManager: session settings", user);

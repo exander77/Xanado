@@ -90,6 +90,16 @@ const GameUIMixin = superclass => class extends superclass {
    */
   undoStack = [];
 
+  /**
+   * Cached list of available layout CSS names.
+   * @memberof browser/GameUIMixin
+   * @instance
+   * @private
+   */
+  availableLayouts = null;
+
+  _layoutPromise = null;
+
   /* c8 ignore start */
 
   /**
@@ -678,6 +688,11 @@ const GameUIMixin = superclass => class extends superclass {
       return false;
     }
 
+    if ((event.key === "l" || event.key === "L") && event.ctrlKey && !isEditable) {
+      this.cycleLayout(!event.shiftKey);
+      return false;
+    }
+
     if (target.id !== "body")
       return true;
 
@@ -1220,6 +1235,54 @@ const GameUIMixin = superclass => class extends superclass {
     .on("keydown", event => this.onKeyDown(event))
 
     .on("resize", () => this.handle_resize());
+  }
+
+  ensureLayouts() {
+    if (Array.isArray(this.availableLayouts) && this.availableLayouts.length > 0)
+      return Promise.resolve(this.availableLayouts);
+    if (!this._layoutPromise) {
+      this._layoutPromise = this.promiseLayouts()
+      .then(layouts => this.availableLayouts = (Array.isArray(layouts) ? layouts : []))
+      .catch(e => {
+        if (this.debug)
+          this.debug("Failed to load layouts", e);
+        this.availableLayouts = [];
+        return this.availableLayouts;
+      });
+    }
+    return this._layoutPromise;
+  }
+
+  applyLayout(layout) {
+    const css = layout || "default";
+    $("#xanadoCSS").each(function() {
+      if (this.href)
+        this.href = this.href.replace(/\/css\/[^/.]+/, `/css/${css}`);
+    });
+    const maybePromise = this.setSetting("layout", css);
+    if (maybePromise && typeof maybePromise.then === "function")
+      return maybePromise.catch(e => {
+        if (this.debug)
+          this.debug("Failed to persist layout", e);
+      });
+    return Promise.resolve();
+  }
+
+  cycleLayout(forward = true) {
+    this.ensureLayouts()
+    .then(layouts => {
+      if (!Array.isArray(layouts) || layouts.length === 0)
+        return;
+      const current = this.getSetting("layout") || "default";
+      let idx = layouts.indexOf(current);
+      if (idx < 0)
+        idx = 0;
+      idx = (idx + (forward ? 1 : layouts.length - 1)) % layouts.length;
+      const next = layouts[idx];
+      if (next === current)
+        return;
+      return this.applyLayout(next);
+    });
   }
 
   /**

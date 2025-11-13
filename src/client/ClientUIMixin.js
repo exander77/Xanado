@@ -30,6 +30,9 @@ import { UI } from "../browser/UI.js";
  * standalone.
  * @mixin client/ClientUIMixin
  */
+const normalizeLanguage = value =>
+      (typeof value === "string" && value.trim() !== "" ? value : "en");
+
 const ClientUIMixin = superclass => class extends superclass {
 
   /**
@@ -346,11 +349,13 @@ const ClientUIMixin = superclass => class extends superclass {
    */
   getSetting(key) {
     if (this.session && this.session.settings
-            && typeof this.session.settings[key] !== "undefined")
-      return this.session.settings[key];
-    else {
-      return (this.defaults.user[key] || this.defaults.game[key]);
+            && typeof this.session.settings[key] !== "undefined") {
+      const value = this.session.settings[key];
+      return key === "language" ? normalizeLanguage(value) : value;
     }
+
+    const fallback = this.defaults.user[key] || this.defaults.game[key];
+    return key === "language" ? normalizeLanguage(fallback) : fallback;
   }
 
   /**

@@ -16,6 +16,9 @@ import { BackendGame } from "../backend/BackendGame.js";
 import { BrowserDatabase } from "../browser/BrowserDatabase.js";
 import { UI } from "../browser/UI.js";
 
+const normalizeLanguage = value =>
+      (typeof value === "string" && value.trim() !== "" ? value : "en");
+
 /**
  * For promiseDefaults.
  * @member {object}
@@ -118,17 +121,23 @@ const StandaloneUIMixin = superclass => class extends superclass {
    */
   getSetting(key) {
     const session = localStorage.getItem(`XANADO${key}`);
-    if (session === null) {
+    if (session === null || (key === "language" && session.trim() === "")) {
       // null means key does not exist
       // see https://developer.mozilla.org/en-US/docs/Web/API/Storage/getItem
       if (typeof Game.DEFAULTS[key] === "undefined") {
         if (key === "language")
-          return $.i18n.locale() || DEFAULT_USER_SETTINGS.language;
+          return normalizeLanguage($.i18n.locale() || DEFAULT_USER_SETTINGS.language);
         return DEFAULT_USER_SETTINGS[key];
-      } else
+      } else {
+        if (key === "language")
+          return normalizeLanguage(Game.DEFAULTS[key]);
         return Game.DEFAULTS[key];
-    } else
+      }
+    } else {
+      if (key === "language")
+        return normalizeLanguage(session);
       return session;
+    }
   }
 
   /**

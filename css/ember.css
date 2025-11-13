@@ -1,0 +1,57 @@
+/* MIT License, The Xanado Project */
+/* Ember palette: charcoal base with fiery highlights */
+
+.Surface .underlay:before {
+  content: attr(data-short);
+}
+
+.Surface td {
+  border-color: #4a2b23;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #ff7f11;
+  border-color: #c35c05;
+  color: #2c1100;
+}
+
+.Surface td.square-T {
+  background-color: #ff3c38;
+  border-color: #c01714;
+  color: #ffecec;
+}
+
+.Surface td.square-Q {
+  background-color: #e63946;
+  border-color: #a31f2a;
+  color: #fff2f4;
+}
+
+.Surface td.square-d {
+  background-color: #ffa952;
+  border-color: #d17a1f;
+  color: #2f1700;
+}
+
+.Surface td.square-t {
+  background-color: #f9c784;
+  border-color: #c98d45;
+  color: #2d1c08;
+}
+
+.Surface td.square-q {
+  background-color: #5c677d;
+  border-color: #394155;
+  color: #f1f3f8;
+}
+
+.Surface td.square-_ {
+  background-color: #1f1b24;
+}
+
+.Tile {
+  background-color: #fff8f1 !important;
+  border-color: #cc6f3d !important;
+  color: #2b1405 !important;
+}

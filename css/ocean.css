@@ -1,0 +1,57 @@
+/* MIT License, The Xanado Project */
+/* Ocean palette: deep sea blues and bright foam accents */
+
+.Surface .underlay:before {
+  content: attr(data-short);
+}
+
+.Surface td {
+  border-color: #1f3b4d;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #1c7cd6;
+  border-color: #115394;
+  color: #eef7ff;
+}
+
+.Surface td.square-T {
+  background-color: #0fa3b1;
+  border-color: #0a717b;
+  color: #022022;
+}
+
+.Surface td.square-Q {
+  background-color: #ff6f59;
+  border-color: #c84b38;
+  color: #2a0b04;
+}
+
+.Surface td.square-d {
+  background-color: #88ccf1;
+  border-color: #4d9ac1;
+  color: #05253b;
+}
+
+.Surface td.square-t {
+  background-color: #3fba9c;
+  border-color: #247862;
+  color: #021b13;
+}
+
+.Surface td.square-q {
+  background-color: #f7b801;
+  border-color: #c48600;
+  color: #2d1a00;
+}
+
+.Surface td.square-_ {
+  background-color: #13313f;
+}
+
+.Tile {
+  background-color: #f3fbff !important;
+  border-color: #4aa3d1 !important;
+  color: #11222b !important;
+}
