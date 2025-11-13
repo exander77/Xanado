@@ -132,6 +132,38 @@ describe("client/ClientUIMixin", () => {
     .then(() => server.wait());
   });
 
+  it("updates cached settings when session exists", () => {
+    const server = new StubServer({
+      "/session-settings": Promise.resolve({})
+    });
+    const ui = new Test();
+    ui.session = JSON.parse(JSON.stringify(session));
+    ui.channel = new TestSocket("socket");
+    ui.attachChannelHandlers();
+
+    const promise = ui.setSetting("layout", "contrast");
+    assert.equal(ui.getSetting("layout"), "contrast");
+
+    return promise.then(() => server.wait());
+  });
+
+  it("updates cached defaults when no session", () => {
+    const server = new StubServer({
+      "/session-settings": Promise.resolve({})
+    });
+    const ui = new Test();
+    ui.session = undefined;
+    ui.defaults.user = { layout: "default" };
+    ui.defaults.game = {};
+    ui.channel = new TestSocket("socket");
+    ui.attachChannelHandlers();
+
+    const promise = ui.setSetting("layout", "contrast");
+    assert.equal(ui.getSetting("layout"), "contrast");
+
+    return promise.then(() => server.wait());
+  });
+
   it("anotherGame", () => {
     const server = new StubServer({
       "/anotherGame/finished_game": Promise.resolve("another_game")

@@ -856,6 +856,12 @@ body.games-ui {
   color: #eeeeee;
 }
 
+/* standard squares */
+.Surface td.square-_ {
+  background-color: #BEB9A6;
+  color: #333333;
+}
+
 /* Applied when a square is active as a potential drop target */
 .Surface td.drop-active {
   border-color: #333333 !important;

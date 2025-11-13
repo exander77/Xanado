@@ -379,11 +379,36 @@ const ClientUIMixin = superclass => class extends superclass {
    * @override
    */
   setSettings(vals) {
+    if (!vals || typeof vals !== "object")
+      return Promise.resolve();
+
+    const normalised = {};
+    Object.keys(vals).forEach(key => {
+      // Normalise stringly language values, leave others untouched
+      normalised[key] = key === "language"
+        ? normalizeLanguage(vals[key])
+        : vals[key];
+    });
+
+    // Keep the cached session/defaults in sync so getSetting() immediately
+    // reflects the latest values (vital for layout cycling shortcuts).
+    const target =
+          this.session
+          ? (this.session.settings = this.session.settings || {})
+          : (this.defaults.user = this.defaults.user || {});
+    Object.keys(normalised).forEach(key => {
+      const value = normalised[key];
+      if (typeof value === "undefined")
+        delete target[key];
+      else
+        target[key] = value;
+    });
+
     return $.ajax({
       url: "/session-settings",
       type: "POST",
       contentType: "application/json",
-      data: JSON.stringify(vals)
+      data: JSON.stringify(normalised)
     });
   }
 };

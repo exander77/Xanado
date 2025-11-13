@@ -1,4 +1,4 @@
-body {
+body.solver-body {
   font-family: helvetica, arial, sans-serif;
   font-size: 100.01%;
   color: black;
@@ -17,18 +17,76 @@ body {
 
   user-select: none;
 }
-.row {
+
+.solver-body .row {
   margin-top: 1em;
   margin-bottom: 1em;
   position: relative;
   box-sizing: border-box;
   width: 100%;
 }
-#results {
+
+.solver-body #results {
   width: 90%;
   white-space: pre-wrap;
 }
-.result {
+
+.solver-body .result {
   font-weight: bold;
   margin-right: 1em;
+}
+
+/* Ensure solver.css can act as a board theme when selected dynamically */
+.Surface .underlay:before {
+  content: attr(data-long);
+}
+
+.Surface td {
+  border-color: #AAA38E;
+}
+
+.Surface td.square-D,
+.Surface td.square-M {
+  background-color: #FBBBB9;
+  color: #F75D59;
+}
+
+.Surface td.square-M .underlay {
+  font-size: 300%;
+}
+
+.Surface td.square-T {
+  background-color: #F75D59;
+  color: #8B0000;
+}
+
+.Surface td.square-Q {
+  background-color: #a21505;
+  color: #eeeeee;
+}
+
+.Surface td.square-d {
+  background-color: #A0CFEC;
+  color: #157DEC;
+}
+
+.Surface td.square-t {
+  background-color: #157DEC;
+  color: #000080;
+}
+
+.Surface td.square-q {
+  background-color: #0e6993;
+  color: #eeeeee;
+}
+
+.Surface td.square-_ {
+  background-color: #BEB9A6;
+  color: #333333;
+}
+
+.Tile {
+  background-color: #F7F7E3;
+  border-color: #DCDCC6;
+  color: #333333;
 }
