@@ -254,6 +254,7 @@ body.games-ui {
   border: 1px solid;
   background-color: #F7F7E3;
   padding: 0.4em 0.2em 0.4em 0.2em;
+  cursor: pointer;
 }
 
 /* The key identifying the game */
@@ -1085,6 +1086,7 @@ body.games-ui {
  */
 #client_toolbox {
   float: right;
+  padding-bottom: 2px;
 }
 
 #client_toolbox span, #client_toolbox a {
@@ -1095,7 +1097,6 @@ body.games-ui {
   width: 1.5em;
   height: 1.5em;
   display: inline-block;
-  background: url("../images/home.svg") no-repeat center center;
   background-size: contain;
   margin-right: 0.4em;
 }
