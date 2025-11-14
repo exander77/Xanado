@@ -183,6 +183,52 @@ const ClientUIMixin = superclass => class extends superclass {
     });
   }
 
+  acquireChatPassword(candidate, allowPrompt = true) {
+    if (typeof candidate === "string" && candidate.length > 0)
+      return Promise.resolve(candidate);
+    if (!allowPrompt)
+      return Promise.resolve(null);
+    return this.promptChatPassword();
+  }
+
+  persistAndUploadChatKeys(bundle, password) {
+    if (!bundle)
+      return Promise.resolve(false);
+    return this.uploadChatKeys(bundle)
+    .then(response => {
+      const stored = response || bundle;
+      if (this.session)
+        this.session.encryption = stored;
+      if (this.chatCrypto)
+        this.chatCrypto.setEncryption(stored);
+      if (typeof password === "string"
+          && this.chatCrypto
+          && this.chatCrypto.privateKeyPem) {
+        this.cacheChatPassword(password);
+        return this.chatCrypto.persistPrivateKey(
+          this.chatCrypto.privateKeyPem, password)
+        .then(() => true);
+      }
+      return true;
+    })
+    .catch(e => {
+      this.notifyChatKeyIssue("Failed to store chat keys. Encrypted chat will be unavailable.");
+      console.error("Failed to upload chat keys", e);
+      throw e;
+    });
+  }
+
+  uploadChatKeys(bundle) {
+    if (!bundle)
+      return Promise.resolve(null);
+    return $.ajax({
+      url: "/chat-keys",
+      type: "POST",
+      contentType: "application/json",
+      data: JSON.stringify(bundle)
+    });
+  }
+
   applyChatPasswordPreference(mode) {
     if (typeof window === "undefined" || !this.session || !this.session.key)
       return;
@@ -203,23 +249,51 @@ const ClientUIMixin = superclass => class extends superclass {
     }
   }
 
+  handlePasswordChanged(newPassword) {
+    if (typeof newPassword !== "string" || newPassword.length === 0)
+      return;
+    this.clearCachedChatPassword();
+    this.cacheChatPassword(newPassword);
+    if (this.session)
+      this.session.encryption = undefined;
+    this.initialiseChatCrypto(newPassword);
+  }
+
   /**
    * Initialise client-side chat crypto using the current session.
+   * @param {string?} preferredPassword password hint to use for setup
    */
-  initialiseChatCrypto() {
+  initialiseChatCrypto(preferredPassword) {
     if (typeof window === "undefined") {
       this.chatCryptoReady = Promise.resolve(false);
       return;
     }
-    if (!this.session || !this.session.encryption) {
+    if (!this.session) {
       this.chatCryptoReady = Promise.resolve(false);
       return;
     }
     const persistence = this.chatPasswordCacheMode();
+    const preferPersistent = persistence === CHAT_CACHE_MODES.PERSISTENT;
+    const cached = preferredPassword
+      || this.getCachedChatPassword({ preferPersistent });
     this.chatCrypto = new ChatCrypto(this.session, { persistence });
-    const cached = this.getCachedChatPassword({
-      preferPersistent: persistence === CHAT_CACHE_MODES.PERSISTENT
-    });
+    if (this.session.encryption)
+      this.chatCrypto.setEncryption(this.session.encryption);
+
+    const ensureServerKeys = () => {
+      if (this.session.encryption
+          && this.session.encryption.publicKey
+          && this.session.encryption.privateKey)
+        return Promise.resolve(false);
+      return this.acquireChatPassword(cached, true)
+      .then(password => {
+        if (!password)
+          return false;
+        return this.chatCrypto.generateServerBundle(password)
+        .then(bundle => this.persistAndUploadChatKeys(bundle, password));
+      });
+    };
+
     const unlockWithPassword = password => {
       if (typeof password !== "string" || password.length === 0)
         return Promise.resolve(false);
@@ -234,7 +308,9 @@ const ClientUIMixin = superclass => class extends superclass {
         return false;
       });
     };
-    this.chatCryptoReady = this.chatCrypto.loadFromStorage(cached)
+
+    this.chatCryptoReady = ensureServerKeys()
+    .then(() => this.chatCrypto.loadFromStorage(cached))
     .then(loaded => {
       if (loaded || (this.chatCrypto.hasUnlockedKey
                      && this.chatCrypto.hasUnlockedKey()))
@@ -253,7 +329,7 @@ const ClientUIMixin = superclass => class extends superclass {
       .then(password => unlockWithPassword(password));
     })
     .catch(e => {
-      console.error("Failed to load cached chat key", e);
+      console.error("Failed to prepare chat keys", e);
       return false;
     });
   }

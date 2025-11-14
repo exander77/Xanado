@@ -134,6 +134,7 @@ class XanadoPass extends Strategy {
  * * {@linkcode UserManager#POST_signout|POST /signout}
  * * {@linkcode UserManager#GET_session|GET /session}
  * * {@linkcode UserManager#POST_session_settings|POST /session-settings}
+ * * {@linkcode UserManager#POST_chat_keys|POST /chat-keys}
  *
  * Routes relevant to OAuth2 providers are:
  * * {@linkcode UserManager#GET_oauth2_providers|GET /oauth2-providers}
@@ -240,27 +241,24 @@ class UserManager {
     };
   }
 
-  /**
-   * Ensure the given user object has chat keys, generating them if necessary.
-   * @param {object} userObject user record (from DB)
-   * @param {string} password plaintext password to wrap the key with
-   * @param {boolean} persist true to persist immediately
-   * @return {Promise<object>} resolves to the user object
-   * @private
-   */
-  ensureChatKeys(userObject, password, persist = true) {
-    const hasKeys = userObject
-          && userObject.encryption
-          && userObject.encryption.publicKey
-          && userObject.encryption.privateKey;
-    if (hasKeys || typeof password !== "string" || password.length === 0)
-      return Promise.resolve(userObject);
-    const bundle = this.createEncryptedChatKeys(password);
-    if (!bundle)
-      return Promise.resolve(userObject);
-    userObject.encryption = bundle;
-    return persist ? this.writeDB().then(() => userObject)
-      : Promise.resolve(userObject);
+  validateChatKeyBundle(bundle) {
+    if (!bundle || typeof bundle !== "object")
+      return false;
+    if (typeof bundle.publicKey !== "string" || bundle.publicKey.length < 64)
+      return false;
+    const priv = bundle.privateKey;
+    if (!priv || typeof priv !== "object")
+      return false;
+    const required = [ "algorithm", "ciphertext", "tag", "iv", "pbkdf2" ];
+    if (required.some(field => typeof priv[field] === "undefined"))
+      return false;
+    if (typeof priv.pbkdf2 !== "object")
+      return false;
+    const pb = priv.pbkdf2;
+    if (typeof pb.salt !== "string" || typeof pb.iterations !== "number"
+        || typeof pb.digest !== "string" || typeof pb.keylen !== "number")
+      return false;
+    return true;
   }
 
   /**
@@ -378,6 +376,10 @@ class UserManager {
       "/session-settings",
       (req, res) => this.POST_session_settings(req, res));
 
+    app.post(
+      "/chat-keys",
+      (req, res) => this.POST_chat_keys(req, res));
+
     // Register a new user
     app.post(
       "/register",
@@ -399,12 +401,7 @@ class UserManager {
         // Assign this property in req
         assignProperty: "userObject"
       }),
-      (req, res) => {
-        const pw = req.body ? req.body.signin_password : undefined;
-        return this.ensureChatKeys(req.userObject, pw)
-        .catch(e => console.error("Failed to prepare chat keys", e))
-        .then(() => this.POST_signin(req, res));
-      });
+      (req, res) => this.POST_signin(req, res));
 
     /* c8 ignore start */
     app.get(
@@ -814,9 +811,6 @@ class UserManager {
     .then(() => {
       if (!desc.key)
         desc.key = genKey(this.db.map(f => f.key));
-      const plain = desc.pass;
-      if (typeof plain === "string" && plain.length > 0)
-        desc.encryption = this.createEncryptedChatKeys(plain);
       return pw_hash(desc.pass);
     })
     .then(pw => {
@@ -961,10 +955,8 @@ class UserManager {
   POST_signin(req, res) {
     // error in passport will -> 401
     req.userObject.provider = "xanado";
-    const plain = req.body ? req.body.signin_password : undefined;
-    return this.ensureChatKeys(req.userObject, plain)
     // Have to call .signin or the cookie doesn't get set
-    .then(() => this.passportLogin(req, res, req.userObject))
+    return this.passportLogin(req, res, req.userObject)
     .then(() => this.sendResult(res, 200, []));
   }
 
@@ -988,15 +980,12 @@ class UserManager {
       return pw_hash(pass)
       .then(hash => {
         userObject.pass = hash;
-        const bundle = this.createEncryptedChatKeys(pass);
-        if (bundle)
-          userObject.encryption = bundle;
+        userObject.encryption = undefined;
       })
       .then(() => this.getUser(userObject))
       .then(uo => {
         uo.pass = userObject.pass;
-        if (userObject.encryption)
-          uo.encryption = userObject.encryption;
+        uo.encryption = undefined;
       })
       .then(() => this.writeDB())
       .then(() => this.sendResult(res, 200, [
@@ -1116,6 +1105,26 @@ class UserManager {
       });
     }
     return this.sendResult(res, 401, [ "Not signed in" ]);
+  }
+
+  POST_chat_keys(req, res) {
+    if (!req.user)
+      return this.sendResult(res, 401, [ "Not signed in" ]);
+    const bundle = req.body;
+    if (!this.validateChatKeyBundle(bundle))
+      return this.sendResult(res, 400, [ "Invalid chat key bundle" ]);
+    req.user.encryption = bundle;
+    return this.getUser(req.user)
+    .then(user => {
+      user.encryption = bundle;
+      return this.writeDB();
+    })
+    .then(() =>
+      this.sendResult(res, 200, this.redactEncryption(bundle)))
+    .catch(e => {
+      console.error("Failed to store chat keys", e);
+      return this.sendResult(res, 500, [ "Failed to store chat keys" ]);
+    });
   }
 
   /**

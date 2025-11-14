@@ -11,6 +11,23 @@ import { Game } from "../../src/game/Game.js";
 
 describe("client/ClientUIMixin", () => {
 
+  const DUMMY_ENCRYPTION = {
+    version: 1,
+    publicKey: "-----BEGIN PUBLIC KEY-----\nTEST\n-----END PUBLIC KEY-----\n",
+    privateKey: {
+      algorithm: "aes-256-gcm",
+      ciphertext: "AA==",
+      tag: "AA==",
+      iv: "AA==",
+      pbkdf2: {
+        salt: "AA==",
+        iterations: 1,
+        digest: "sha256",
+        keylen: 32
+      }
+    }
+  };
+
   const session = {
     name: "Descartes",
     settings: {
@@ -23,8 +40,9 @@ describe("client/ClientUIMixin", () => {
       "warnings": false,
       "one_window": false,
       "notification": false,
-      "chat_key_cache": "persistent"
-    }
+      "chat_key_cache": "session"
+    },
+    encryption: DUMMY_ENCRYPTION
   };
 
   let Test, keep = {};
@@ -70,7 +88,7 @@ describe("client/ClientUIMixin", () => {
       notification: false,
       layout: "none",
       jqTheme: "grass",
-      chat_key_cache: "persistent"
+      chat_key_cache: "session"
     };
     const server = new StubServer({
       "/session": Promise.resolve(undefined),

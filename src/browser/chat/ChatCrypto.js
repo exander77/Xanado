@@ -27,9 +27,17 @@ const RSA_IMPORT_PARAMS = {
   name: "RSA-OAEP",
   hash: "SHA-256"
 };
+const RSA_PUBLIC_EXPONENT = new Uint8Array([0x01, 0x00, 0x01]);
+const RSA_MODULUS_LENGTH = 2048;
 const AES_ALGORITHM = "AES-GCM";
 const AES_IV_BYTES = 12;
 const SYMMETRIC_KEY_BYTES = 32;
+const GCM_TAG_BYTES = 16;
+
+const SERVER_KEY_VERSION = 1;
+const SERVER_PBKDF2_ITERATIONS = 210000;
+const SERVER_PBKDF2_DIGEST = "sha256";
+const SERVER_PBKDF2_SALT_BYTES = 16;
 
 const STORAGE_PREFIX = "XANADO_CHAT_PRIV_";
 export const CHAT_PASSWORD_CACHE_KEY = "XANADO_LAST_PASS";
@@ -84,6 +92,22 @@ const concatBuffers = (bufA, bufB) => {
   combined.set(a, 0);
   combined.set(b, a.length);
   return combined.buffer;
+};
+
+const pemEncode = (label, buffer) => {
+  const base64 = arrayBufferToBase64(buffer)
+  .replace(/(.{64})/g, "$1\n");
+  return `-----BEGIN ${label}-----\n${base64}\n-----END ${label}-----\n`;
+};
+
+const splitGcmPayload = buffer => {
+  const bytes = new Uint8Array(buffer);
+  const tag = bytes.slice(bytes.length - GCM_TAG_BYTES);
+  const cipher = bytes.slice(0, bytes.length - GCM_TAG_BYTES);
+  return {
+    ciphertext: cipher.buffer,
+    tag: tag.buffer
+  };
 };
 
 const normalizePersistence = mode =>
@@ -145,8 +169,35 @@ class ChatCrypto {
     return !!(this.publicKeyPem && this.encryptedPrivateKey);
   }
 
+  setEncryption(encryption) {
+    if (!encryption)
+      return;
+    this.publicKeyPem = encryption.publicKey;
+    this.encryptedPrivateKey = encryption.privateKey;
+  }
+
   hasUnlockedKey() {
     return !!this.privateKey;
+  }
+
+  generateKeyPair() {
+    if (!this.isSupported())
+      return Promise.reject(new Error("Crypto not supported"));
+    return subtle.generateKey({
+      name: "RSA-OAEP",
+      modulusLength: RSA_MODULUS_LENGTH,
+      publicExponent: RSA_PUBLIC_EXPONENT,
+      hash: "SHA-256"
+    }, true, [ "encrypt", "decrypt" ])
+    .then(keys => Promise.all([
+      subtle.exportKey("spki", keys.publicKey),
+      subtle.exportKey("pkcs8", keys.privateKey)
+    ])
+    .then(([pubBuf, privBuf]) => ({
+      publicKey: pemEncode("PUBLIC KEY", pubBuf),
+      privateKey: pemEncode("PRIVATE KEY", privBuf),
+      privateKeyObj: keys.privateKey
+    })));
   }
 
   /**
@@ -223,10 +274,75 @@ class ChatCrypto {
     return this.decryptPrivateKeyPem(password)
     .then(pem => this.importPrivateKey(pem)
           .then(key => {
-            this.privateKeyPem = pem;
-            this.privateKey = key;
-            return this.persistPrivateKey(pem, password).then(() => true);
+          this.privateKeyPem = pem;
+          this.privateKey = key;
+          return this.persistPrivateKey(pem, password).then(() => true);
           }));
+  }
+
+  encryptPrivateKeyForServer(pem, password) {
+    if (!this.isSupported())
+      return Promise.reject(new Error("Crypto not supported"));
+    if (typeof password !== "string" || password.length === 0)
+      return Promise.reject(new Error("Password required"));
+    if (!globalScope.crypto || !globalScope.crypto.getRandomValues)
+      return Promise.reject(new Error("Crypto not available"));
+    const salt = globalScope.crypto.getRandomValues(
+      new Uint8Array(SERVER_PBKDF2_SALT_BYTES));
+    const iv = globalScope.crypto.getRandomValues(new Uint8Array(AES_IV_BYTES));
+    return derivePasswordKey(
+      password, salt.buffer, SERVER_PBKDF2_ITERATIONS)
+    .then(key => subtle.encrypt({
+      name: AES_ALGORITHM,
+      iv
+    }, key, TEXT_ENCODER.encode(pem)))
+    .then(enc => {
+      const { ciphertext, tag } = splitGcmPayload(enc);
+      return {
+        algorithm: "aes-256-gcm",
+        ciphertext: arrayBufferToBase64(ciphertext),
+        tag: arrayBufferToBase64(tag),
+        iv: arrayBufferToBase64(iv.buffer),
+        pbkdf2: {
+          salt: arrayBufferToBase64(salt.buffer),
+          iterations: SERVER_PBKDF2_ITERATIONS,
+          digest: SERVER_PBKDF2_DIGEST,
+          keylen: SYMMETRIC_KEY_BYTES
+        }
+      };
+    });
+  }
+
+  generateServerBundle(password) {
+    return this.generateKeyPair()
+    .then(keys => {
+      this.publicKeyPem = keys.publicKey;
+      this.privateKeyPem = keys.privateKey;
+      this.privateKey = keys.privateKeyObj;
+      return this.encryptPrivateKeyForServer(keys.privateKey, password)
+      .then(privateKey => {
+        this.encryptedPrivateKey = privateKey;
+        return {
+          version: SERVER_KEY_VERSION,
+          publicKey: keys.publicKey,
+          privateKey
+        };
+      });
+    });
+  }
+
+  wrapExistingPrivateKey(password) {
+    if (!this.privateKeyPem)
+      return Promise.reject(new Error("No private key available"));
+    return this.encryptPrivateKeyForServer(this.privateKeyPem, password)
+    .then(privateKey => {
+      this.encryptedPrivateKey = privateKey;
+      return {
+        version: SERVER_KEY_VERSION,
+        publicKey: this.publicKeyPem,
+        privateKey
+      };
+    });
   }
 
   /**

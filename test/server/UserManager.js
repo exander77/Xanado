@@ -139,6 +139,18 @@ describe("server/UserManager", () => {
     });
   }
 
+  function uploadChatKeys(server, cookie, password = "chat-pass") {
+    const bundle = server.userManager.createEncryptedChatKeys(password);
+    return chai.request(server.express)
+    .post("/chat-keys")
+    .set("Cookie", cookie)
+    .send(bundle)
+    .then(res => {
+      assert.equal(res.status, 200);
+      return res.body;
+    });
+  }
+
   it("/register new username", () => {
     const server = new Server(config);
     return chai.request(server.express)
@@ -439,6 +451,32 @@ describe("server/UserManager", () => {
       // NO! assert.deepEqual(res.body, ["Not signed in"]);
     });
   });
+
+  it("/chat-keys requires signin", () => {
+    const server = new Server(config);
+    return register(server, {
+      register_username: "chatless",
+      register_password: "secret",
+      register_email: "chatless@example.com"
+    })
+    .then(() => chai.request(server.express)
+          .post("/chat-keys")
+          .send({}))
+    .then(res => {
+      assert.equal(res.status, 401);
+      sparseEqual(res.body, ["Not signed in"]);
+      return signin(server, {
+        signin_username: "chatless",
+        signin_password: "secret"
+      });
+    })
+    .then(cookie => uploadChatKeys(server, cookie, "secret"))
+    .then(res => {
+      assert(res.publicKey);
+      assert(res.privateKey);
+    });
+  });
+
   it("exposes public keys for encrypted chat", () => {
     const server = new Server(config);
     const creds = {
@@ -457,6 +495,9 @@ describe("server/UserManager", () => {
     })
     .then(c => {
       cookie = c;
+      return uploadChatKeys(server, cookie, creds.register_password);
+    })
+    .then(() => {
       return chai.request(server.express)
       .get("/session")
       .set("Cookie", cookie);

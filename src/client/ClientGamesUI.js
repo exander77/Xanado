@@ -57,11 +57,23 @@ class ClientGamesUI extends ClientUIMixin(GamesUIMixin(UI)) {
           /* webpackMode: "lazy" */
           /* webpackChunkName: "ChangePasswordDialog" */
           "../client/ChangePasswordDialog.js")
-        .then(mod => new mod.ChangePasswordDialog({
-          postAction: "/change-password",
-          postResult: () => this.refresh(),
-          error: e => this.alert(e, $.i18n("failed", $.i18n("Change password")))
-        })));
+        .then(mod => {
+          let pendingPassword;
+          return new mod.ChangePasswordDialog({
+            ui: this,
+            onSubmit: (dlg, vals) => {
+              pendingPassword = vals.password;
+            },
+            postAction: "/change-password",
+            postResult: () => {
+              if (pendingPassword)
+                this.handlePasswordChanged(pendingPassword);
+              pendingPassword = undefined;
+              this.refresh();
+            },
+            error: e => this.alert(e, $.i18n("failed", $.i18n("Change password")))
+          });
+        }));
   }
 
   /**
