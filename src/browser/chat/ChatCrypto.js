@@ -35,6 +35,13 @@ const STORAGE_PREFIX = "XANADO_CHAT_PRIV_";
 export const CHAT_PASSWORD_CACHE_KEY = "XANADO_LAST_PASS";
 const SESSION_WRAP_PREFIX = "XANADO_CHAT_WRAP_";
 const BROADCAST_PREFIX = "XANADO_CHAT_CHANNEL_";
+const CHAT_CACHE_MODES = {
+  SESSION: "session",
+  PERSISTENT: "persistent"
+};
+const PASSWORD_SALT_BYTES = 16;
+const PASSWORD_ITERATIONS = 200000;
+const PERSISTENT_VERSION = 2;
 
 const decodeBase64 = data => globalScope.atob
   ? globalScope.atob(data)
@@ -79,18 +86,44 @@ const concatBuffers = (bufA, bufB) => {
   return combined.buffer;
 };
 
+const normalizePersistence = mode =>
+      (mode === CHAT_CACHE_MODES.SESSION
+       ? CHAT_CACHE_MODES.SESSION
+       : CHAT_CACHE_MODES.PERSISTENT);
+
+const derivePasswordKey = (password, salt, iterations = PASSWORD_ITERATIONS) => {
+  if (!TEXT_ENCODER)
+    return Promise.reject(new Error("No encoder"));
+  return subtle.importKey(
+    "raw",
+    TEXT_ENCODER.encode(password),
+    { name: "PBKDF2" },
+    false,
+    [ "deriveKey" ])
+  .then(baseKey => subtle.deriveKey({
+    name: "PBKDF2",
+    salt,
+    iterations,
+    hash: "SHA-256"
+  }, baseKey, {
+    name: AES_ALGORITHM,
+    length: SYMMETRIC_KEY_BYTES * 8
+  }, false, [ "encrypt", "decrypt" ]));
+};
+
 /**
  * Manage chat encryption/decryption keys in the browser.
  */
 class ChatCrypto {
 
-  constructor(session) {
+  constructor(session, options = {}) {
     this.session = session || {};
     this.userKey = this.session && this.session.key;
     this.publicKeyPem = this.session?.encryption?.publicKey;
     this.encryptedPrivateKey = this.session?.encryption?.privateKey;
     this.storageKey = this.userKey ? `${STORAGE_PREFIX}${this.userKey}` : undefined;
     this.wrapStorageKey = this.userKey ? `${SESSION_WRAP_PREFIX}${this.userKey}` : undefined;
+    this.persistence = normalizePersistence(options.persistence);
     this.privateKeyPem = undefined;
     this.privateKey = undefined;
     this.wrapMaterial = undefined;
@@ -120,7 +153,7 @@ class ChatCrypto {
    * Attempt to read and import a cached private key from localStorage.
    * @return {Promise<boolean>} resolves true if a key was loaded
    */
-  loadFromStorage() {
+  loadFromStorage(password) {
     if (!this.isSupported() || !SECURE_CONTEXT || !this.storageKey)
       return Promise.resolve(false);
     const cached = globalScope.localStorage
@@ -133,13 +166,15 @@ class ChatCrypto {
     } catch (e) {
       payload = cached;
     }
+    const importPem = pem => this.importPrivateKey(pem)
+    .then(key => {
+      this.privateKey = key;
+      this.privateKeyPem = pem;
+      return this.persistPrivateKey(pem, password)
+      .then(() => true);
+    });
     if (typeof payload === "string")
-      return this.importPrivateKey(payload)
-      .then(key => {
-        this.privateKey = key;
-        this.privateKeyPem = payload;
-        return this.persistPrivateKey(payload).then(() => true);
-      })
+      return importPem(payload)
       .catch(() => {
         this.lock();
         return false;
@@ -147,24 +182,15 @@ class ChatCrypto {
     if (!payload || typeof payload !== "object"
         || !payload.ciphertext || !payload.iv)
       return Promise.resolve(false);
-    return this.ensureSessionWrapKey()
-    .then(wrapKey => {
-      if (!wrapKey)
-        throw new Error("No session key");
-      return subtle.decrypt({
-        name: AES_ALGORITHM,
-        iv: base64ToArrayBuffer(payload.iv)
-      }, wrapKey, base64ToArrayBuffer(payload.ciphertext));
-    })
-    .then(buffer => {
-      const pem = TEXT_DECODER.decode(buffer);
-      return this.importPrivateKey(pem)
-      .then(key => {
-        this.privateKey = key;
-        this.privateKeyPem = pem;
-        return true;
-      });
-    })
+    const mode = payload.mode || CHAT_CACHE_MODES.SESSION;
+    if ((mode === CHAT_CACHE_MODES.PERSISTENT || payload.salt)
+        && (typeof password !== "string" || password.length === 0))
+      return Promise.resolve(false);
+    const decryptor = (mode === CHAT_CACHE_MODES.PERSISTENT || payload.salt)
+      ? this.decryptPersistentPayload(payload, password)
+      : this.decryptSessionPayload(payload);
+    return decryptor
+    .then(pem => importPem(pem))
     .catch(e => {
       console.error("Failed to load cached private key", e);
       this.lock();
@@ -199,7 +225,7 @@ class ChatCrypto {
           .then(key => {
             this.privateKeyPem = pem;
             this.privateKey = key;
-            return this.persistPrivateKey(pem).then(() => true);
+            return this.persistPrivateKey(pem, password).then(() => true);
           }));
   }
 
@@ -304,11 +330,17 @@ class ChatCrypto {
     .then(buffer => TEXT_DECODER.decode(buffer));
   }
 
-  persistPrivateKey(pem) {
+  persistPrivateKey(pem, password) {
     if (!this.isSupported() || !SECURE_CONTEXT || !this.storageKey || !pem)
       return Promise.resolve();
     if (!globalScope.localStorage || !globalScope.crypto || !globalScope.crypto.getRandomValues)
       return Promise.resolve();
+    if (this.persistence === CHAT_CACHE_MODES.PERSISTENT)
+      return this.persistWithPassword(pem, password);
+    return this.persistWithSessionWrap(pem);
+  }
+
+  persistWithSessionWrap(pem) {
     return this.ensureSessionWrapKey()
     .then(wrapKey => {
       if (!wrapKey)
@@ -321,11 +353,36 @@ class ChatCrypto {
       .then(cipher => {
         const payload = {
           version: 1,
+          mode: CHAT_CACHE_MODES.SESSION,
           iv: arrayBufferToBase64(iv.buffer),
           ciphertext: arrayBufferToBase64(cipher)
         };
         globalScope.localStorage.setItem(this.storageKey, JSON.stringify(payload));
       });
+    })
+    .catch(e => console.error("Failed to persist chat key", e));
+  }
+
+  persistWithPassword(pem, password) {
+    if (typeof password !== "string" || password.length === 0)
+      return Promise.resolve();
+    const salt = globalScope.crypto.getRandomValues(new Uint8Array(PASSWORD_SALT_BYTES));
+    const iv = globalScope.crypto.getRandomValues(new Uint8Array(AES_IV_BYTES));
+    return derivePasswordKey(password, salt.buffer)
+    .then(key => subtle.encrypt({
+      name: AES_ALGORITHM,
+      iv
+    }, key, TEXT_ENCODER.encode(pem)))
+    .then(cipher => {
+      const payload = {
+        version: PERSISTENT_VERSION,
+        mode: CHAT_CACHE_MODES.PERSISTENT,
+        salt: arrayBufferToBase64(salt.buffer),
+        iterations: PASSWORD_ITERATIONS,
+        iv: arrayBufferToBase64(iv.buffer),
+        ciphertext: arrayBufferToBase64(cipher)
+      };
+      globalScope.localStorage.setItem(this.storageKey, JSON.stringify(payload));
     })
     .catch(e => console.error("Failed to persist chat key", e));
   }
@@ -359,6 +416,34 @@ class ChatCrypto {
       this.broadcastWrapMaterial();
       return this.importWrapKey(material);
     });
+  }
+
+  decryptSessionPayload(payload) {
+    return this.ensureSessionWrapKey()
+    .then(wrapKey => {
+      if (!wrapKey)
+        throw new Error("No session key");
+      return subtle.decrypt({
+        name: AES_ALGORITHM,
+        iv: base64ToArrayBuffer(payload.iv)
+      }, wrapKey, base64ToArrayBuffer(payload.ciphertext));
+    })
+    .then(buffer => TEXT_DECODER.decode(buffer));
+  }
+
+  decryptPersistentPayload(payload, password) {
+    if (typeof password !== "string" || password.length === 0)
+      return Promise.reject(new Error("Password required"));
+    if (!payload.salt)
+      return Promise.reject(new Error("Missing salt"));
+    const salt = base64ToArrayBuffer(payload.salt);
+    const iterations = payload.iterations || PASSWORD_ITERATIONS;
+    return derivePasswordKey(password, salt, iterations)
+    .then(key => subtle.decrypt({
+      name: AES_ALGORITHM,
+      iv: base64ToArrayBuffer(payload.iv)
+    }, key, base64ToArrayBuffer(payload.ciphertext)))
+    .then(buffer => TEXT_DECODER.decode(buffer));
   }
 
   importWrapKey(material) {
@@ -439,64 +524,6 @@ class ChatCrypto {
     default:
       break;
     }
-  }
-
-  persistPrivateKey(pem) {
-    if (!this.isSupported() || !this.storageKey || !pem)
-      return Promise.resolve();
-    if (!globalScope.localStorage || !globalScope.crypto || !globalScope.crypto.getRandomValues)
-      return Promise.resolve();
-    return this.ensureSessionWrapKey()
-    .then(wrapKey => {
-      if (!wrapKey)
-        return;
-      const iv = globalScope.crypto.getRandomValues(new Uint8Array(AES_IV_BYTES));
-      return subtle.encrypt({
-        name: AES_ALGORITHM,
-        iv
-      }, wrapKey, TEXT_ENCODER.encode(pem))
-      .then(cipher => {
-        const payload = {
-          version: 1,
-          iv: arrayBufferToBase64(iv.buffer),
-          ciphertext: arrayBufferToBase64(cipher)
-        };
-        globalScope.localStorage.setItem(this.storageKey, JSON.stringify(payload));
-      });
-    })
-    .catch(e => console.error("Failed to persist chat key", e));
-  }
-
-  ensureSessionWrapKey() {
-    if (!this.isSupported()
-        || !this.wrapStorageKey
-        || !globalScope.sessionStorage
-        || !globalScope.crypto
-        || !globalScope.crypto.subtle)
-      return Promise.resolve(null);
-    let material = globalScope.sessionStorage.getItem(this.wrapStorageKey);
-    if (!material) {
-      const bytes = globalScope.crypto.getRandomValues(new Uint8Array(SYMMETRIC_KEY_BYTES));
-      material = arrayBufferToBase64(bytes.buffer);
-      globalScope.sessionStorage.setItem(this.wrapStorageKey, material);
-    }
-    if (this.wrapKey && this.wrapMaterial === material)
-      return Promise.resolve(this.wrapKey);
-    return subtle.importKey(
-      "raw",
-      base64ToArrayBuffer(material),
-      { name: AES_ALGORITHM },
-      false,
-      ["encrypt", "decrypt"])
-    .then(key => {
-      this.wrapKey = key;
-      this.wrapMaterial = material;
-      return key;
-    })
-    .catch(e => {
-      console.error("Failed to establish session wrap key", e);
-      return null;
-    });
   }
 
   importPublicKey(pem) {

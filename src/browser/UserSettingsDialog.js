@@ -58,6 +58,10 @@ class UserSettingsDialog extends Dialog {
       .val(ui.getSetting("jqTheme"))
       .selectmenu("refresh");
 
+      this.$dlg.find("select[name=chat_key_cache]")
+      .val(ui.getSetting("chat_key_cache") || "persistent")
+      .selectmenu("refresh");
+
       this.$dlg.find('input[type=checkbox]')
       .each(function() {
         $(this).prop("checked", ui.getSetting(this.name) === "true")

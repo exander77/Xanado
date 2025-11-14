@@ -39,7 +39,8 @@ describe("server/Server.js", () => {
       timePenalty: 0
     },
     user_defaults: {
-      layout: "default"
+      layout: "default",
+      chat_key_cache: "persistent"
     },
     games: "delayed",
     html_dir: "html"

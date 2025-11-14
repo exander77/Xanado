@@ -22,7 +22,8 @@ describe("client/ClientUIMixin", () => {
       "tile_click": false,
       "warnings": false,
       "one_window": false,
-      "notification": false
+      "notification": false,
+      "chat_key_cache": "persistent"
     }
   };
 
@@ -68,7 +69,8 @@ describe("client/ClientUIMixin", () => {
     const USER_DEFAULTS = {
       notification: false,
       layout: "none",
-      jqTheme: "grass"
+      jqTheme: "grass",
+      chat_key_cache: "persistent"
     };
     const server = new StubServer({
       "/session": Promise.resolve(undefined),

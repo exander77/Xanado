@@ -22,6 +22,7 @@ describe("browser/UserSettingsDialog", () => {
     "language": "en",
     "layout": "default",
     "jqTheme": "vader",
+    "chat_key_cache": "persistent",
     "turn_alert": false,
     "cheers": false,
     "tile_click": false,

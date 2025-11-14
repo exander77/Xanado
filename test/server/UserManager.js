@@ -39,7 +39,8 @@ describe("server/UserManager", () => {
       timePenalty: 0
     },
     user_defaults: {
-      layout: "default"
+      layout: "default",
+      chat_key_cache: "persistent"
     },
     html_dir: "html"
   };

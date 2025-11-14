@@ -28,6 +28,7 @@ const DEFAULT_USER_SETTINGS = {
   one_window: true,
 	notification: false, // requires https
 	layout: "default",
+  chat_key_cache: "persistent",
   language: "en",
   jqTheme: "pepper-grinder",
 	warnings: true,

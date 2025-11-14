@@ -72,6 +72,7 @@ the following fields:
 	+ `notification` : Whether to generate UI notifications. Notifications require HTTPS. Defaults to `false`.
 	+ `theme` : Layout theme, must be the name of a file in `css` (no extension). Defaults to `default`.
 	+ `jqTheme` : Name of one of the jQuery user interface themes.
+	+ `chat_key_cache` : `"persistent"` to keep your chat password cached between tabs/windows (default) or `"session"` to require re-entry for each tab.
 	+ `warnings` : Whether to generate warning sounds. Defaults to  `true`.
 	+ `cheers` : Whether to generate end of game cheers / groans. Defaults to `true`.
 	+ `tile` : Whether to make a click when a tile is placed. Defaults to `true`.

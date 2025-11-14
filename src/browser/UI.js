@@ -317,6 +317,41 @@ class UI {
   }
 
   /**
+   * Override to identify how chat passwords should be cached.
+   * @return {string} either "session" or "persistent"
+   */
+  chatPasswordCacheMode() {
+    return "session";
+  }
+
+  /**
+   * Override to cache the chat password in local storage.
+   * @param {string} password chat password
+   */
+  cacheChatPassword() { }
+
+  /**
+   * Override to retrieve a cached chat password, if available.
+   * @return {string?} cached password
+   */
+  getCachedChatPassword() {
+    return undefined;
+  }
+
+  /**
+   * Override to clear cached chat passwords.
+   */
+  clearCachedChatPassword() { }
+
+  /**
+   * Override to prompt the user for their chat password.
+   * @return {Promise<string?>} resolves to the password or null if cancelled
+   */
+  promptChatPassword() {
+    return Promise.resolve(null);
+  }
+
+  /**
    * Identify the signed-in user. Override in subclasses.
    * @return {Promise} a promise that resolves to an simple
    * session object if someone is signed in, or throws otherwise.

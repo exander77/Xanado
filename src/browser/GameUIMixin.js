@@ -384,22 +384,49 @@ const GameUIMixin = superclass => class extends superclass {
     return ready.then(() => {
       if (this.chatCrypto.hasUnlockedKey && this.chatCrypto.hasUnlockedKey())
         return;
-      return this.chatCrypto.loadFromStorage()
+      const cachedPassword = (typeof this.getCachedChatPassword === "function")
+        ? this.getCachedChatPassword()
+        : undefined;
+      return this.chatCrypto.loadFromStorage(cachedPassword)
       .then(loaded => {
         if (loaded)
           this.chatCryptoReady = Promise.resolve(true);
         if (loaded || (this.chatCrypto.hasUnlockedKey && this.chatCrypto.hasUnlockedKey()))
           return;
-        if (!interactive || typeof window === "undefined")
+        if (cachedPassword) {
+          return this.chatCrypto.unlockWithPassword(cachedPassword)
+          .then(result => {
+            if (result) {
+              this.chatCryptoReady = Promise.resolve(true);
+              if (typeof this.cacheChatPassword === "function")
+                this.cacheChatPassword(cachedPassword);
+            }
+            return result;
+          });
+        }
+        return false;
+      })
+      .then(() => {
+        if (this.chatCrypto.hasUnlockedKey && this.chatCrypto.hasUnlockedKey())
+          return;
+        if (!interactive)
           throw new Error("locked");
-        const password = window.prompt("Enter your password to unlock chat");
-        if (!password)
-          throw new Error("locked");
-        return this.chatCrypto.unlockWithPassword(password)
-        .then(result => {
-          if (result)
-            this.chatCryptoReady = Promise.resolve(true);
-          return result;
+        const prompter = (typeof this.promptChatPassword === "function")
+          ? this.promptChatPassword.bind(this)
+          : () => Promise.resolve(null);
+        return prompter()
+        .then(password => {
+          if (!password)
+            throw new Error("locked");
+          return this.chatCrypto.unlockWithPassword(password)
+          .then(result => {
+            if (result) {
+              this.chatCryptoReady = Promise.resolve(true);
+              if (typeof this.cacheChatPassword === "function")
+                this.cacheChatPassword(password);
+            }
+            return result;
+          });
         });
       });
     });

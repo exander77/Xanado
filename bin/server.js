@@ -47,6 +47,7 @@ const DEFAULT_CONFIG = {
     notification: false, // notification requires https
     layout: "default",
     jqTheme: "pepper-grinder",
+    chat_key_cache: "persistent",
     warnings: true,
     cheers: true,
     tile_click: true,

@@ -34,6 +34,11 @@ import { ChatCrypto, CHAT_PASSWORD_CACHE_KEY } from "../browser/chat/ChatCrypto.
 const normalizeLanguage = value =>
       (typeof value === "string" && value.trim() !== "" ? value : "en");
 
+const CHAT_CACHE_MODES = {
+  SESSION: "session",
+  PERSISTENT: "persistent"
+};
+
 const ClientUIMixin = superclass => class extends superclass {
 
   /**
@@ -83,6 +88,121 @@ const ClientUIMixin = superclass => class extends superclass {
     return $.get("/css");
   }
 
+  chatPasswordCacheMode() {
+    const pref = this.getSetting("chat_key_cache");
+    return pref === CHAT_CACHE_MODES.SESSION
+      ? CHAT_CACHE_MODES.SESSION
+      : CHAT_CACHE_MODES.PERSISTENT;
+  }
+
+  getChatPasswordStorageKey() {
+    const suffix = this.session && this.session.key
+      ? this.session.key
+      : "anon";
+    return `${CHAT_PASSWORD_CACHE_KEY}_${suffix}`;
+  }
+
+  cacheChatPassword(password) {
+    if (typeof window === "undefined"
+        || typeof password !== "string"
+        || password.length === 0)
+      return;
+    const key = this.getChatPasswordStorageKey();
+    if (window.sessionStorage)
+      window.sessionStorage.setItem(key, password);
+    if (window.sessionStorage)
+      window.sessionStorage.removeItem(CHAT_PASSWORD_CACHE_KEY);
+    if (this.chatPasswordCacheMode() === CHAT_CACHE_MODES.PERSISTENT
+        && window.localStorage)
+      window.localStorage.setItem(key, password);
+    else if (window.localStorage)
+      window.localStorage.removeItem(key);
+  }
+
+  clearCachedChatPassword(all = false) {
+    if (typeof window === "undefined")
+      return;
+    const key = this.getChatPasswordStorageKey();
+    if (window.sessionStorage)
+      window.sessionStorage.removeItem(key);
+    if (window.localStorage)
+      window.localStorage.removeItem(key);
+    if (all) {
+      if (window.sessionStorage)
+        window.sessionStorage.removeItem(CHAT_PASSWORD_CACHE_KEY);
+      if (window.localStorage)
+        window.localStorage.removeItem(CHAT_PASSWORD_CACHE_KEY);
+    }
+  }
+
+  getCachedChatPassword(options = {}) {
+    if (typeof window === "undefined")
+      return undefined;
+    const preferPersistent = typeof options.preferPersistent === "boolean"
+      ? options.preferPersistent
+      : this.chatPasswordCacheMode() === CHAT_CACHE_MODES.PERSISTENT;
+    const key = this.getChatPasswordStorageKey();
+    let password = window.sessionStorage
+      ? window.sessionStorage.getItem(key)
+      : null;
+    if (!password && preferPersistent && window.localStorage)
+      password = window.localStorage.getItem(key);
+    if (!password && window.sessionStorage)
+      password = window.sessionStorage.getItem(CHAT_PASSWORD_CACHE_KEY);
+    if (!password && preferPersistent && window.localStorage)
+      password = window.localStorage.getItem(CHAT_PASSWORD_CACHE_KEY);
+    if (password) {
+      if (window.sessionStorage) {
+        window.sessionStorage.setItem(key, password);
+        window.sessionStorage.removeItem(CHAT_PASSWORD_CACHE_KEY);
+      }
+      if (preferPersistent && window.localStorage) {
+        window.localStorage.setItem(key, password);
+        window.localStorage.removeItem(CHAT_PASSWORD_CACHE_KEY);
+      }
+    }
+    return password || undefined;
+  }
+
+  promptChatPassword(message) {
+    if (typeof window === "undefined")
+      return Promise.resolve(null);
+    return new Promise(resolve => {
+      setTimeout(() => {
+        let promptMessage = message;
+        if (!promptMessage) {
+          try {
+            promptMessage = $.i18n("prompt-chat-password");
+          } catch (e) {
+            promptMessage = "Enter your chat password to unlock encrypted messages";
+          }
+        }
+        const value = window.prompt(promptMessage, "");
+        resolve(typeof value === "string" && value.length > 0 ? value : null);
+      }, 0);
+    });
+  }
+
+  applyChatPasswordPreference(mode) {
+    if (typeof window === "undefined" || !this.session || !this.session.key)
+      return;
+    const normalized = mode === CHAT_CACHE_MODES.SESSION
+      ? CHAT_CACHE_MODES.SESSION
+      : CHAT_CACHE_MODES.PERSISTENT;
+    if (normalized === CHAT_CACHE_MODES.SESSION && window.localStorage) {
+      window.localStorage.removeItem(this.getChatPasswordStorageKey());
+      return;
+    }
+    if (normalized === CHAT_CACHE_MODES.PERSISTENT && window.localStorage) {
+      const key = this.getChatPasswordStorageKey();
+      const source = window.sessionStorage
+        ? window.sessionStorage.getItem(key)
+        : undefined;
+      if (source)
+        window.localStorage.setItem(key, source);
+    }
+  }
+
   /**
    * Initialise client-side chat crypto using the current session.
    */
@@ -95,30 +215,47 @@ const ClientUIMixin = superclass => class extends superclass {
       this.chatCryptoReady = Promise.resolve(false);
       return;
     }
-    this.chatCrypto = new ChatCrypto(this.session);
-    const cached = window.sessionStorage
-          && window.sessionStorage.getItem(CHAT_PASSWORD_CACHE_KEY);
-    if (cached) {
-      window.sessionStorage.removeItem(CHAT_PASSWORD_CACHE_KEY);
-      this.chatCryptoReady = this.chatCrypto.unlockWithPassword(cached)
-      .then(() => true)
-      .catch(e => {
-        console.error("Failed to unlock chat key", e);
-        this.notifyChatKeyIssue("Unable to unlock chat key. You will be prompted for your password again.");
-        return false;
-      });
-    } else
-      this.chatCryptoReady = this.chatCrypto.loadFromStorage()
-      .then(loaded => {
-        if (!loaded)
-          this.notifyChatKeyIssue("Chat key could not be cached. Expect to re-enter your password.");
-        return !!loaded;
+    const persistence = this.chatPasswordCacheMode();
+    this.chatCrypto = new ChatCrypto(this.session, { persistence });
+    const cached = this.getCachedChatPassword({
+      preferPersistent: persistence === CHAT_CACHE_MODES.PERSISTENT
+    });
+    const unlockWithPassword = password => {
+      if (typeof password !== "string" || password.length === 0)
+        return Promise.resolve(false);
+      return this.chatCrypto.unlockWithPassword(password)
+      .then(result => {
+        if (result)
+          this.cacheChatPassword(password);
+        return result;
       })
       .catch(e => {
-        console.error("Failed to load cached chat key", e);
-        this.notifyChatKeyIssue("Failed to restore encrypted chat key. You'll be asked for your password again.");
+        console.error("Failed to unlock chat key", e);
         return false;
       });
+    };
+    this.chatCryptoReady = this.chatCrypto.loadFromStorage(cached)
+    .then(loaded => {
+      if (loaded || (this.chatCrypto.hasUnlockedKey
+                     && this.chatCrypto.hasUnlockedKey()))
+        return true;
+      if (cached)
+        return unlockWithPassword(cached);
+      return false;
+    })
+    .then(result => {
+      if (result || (this.chatCrypto.hasUnlockedKey
+                     && this.chatCrypto.hasUnlockedKey()))
+        return true;
+      if (persistence !== CHAT_CACHE_MODES.PERSISTENT)
+        return false;
+      return this.promptChatPassword()
+      .then(password => unlockWithPassword(password));
+    })
+    .catch(e => {
+      console.error("Failed to load cached chat key", e);
+      return false;
+    });
   }
 
   notifyChatKeyIssue(message) {
@@ -261,6 +398,7 @@ const ClientUIMixin = superclass => class extends superclass {
             this.chatCrypto.lock();
           this.chatCrypto = undefined;
           this.chatCryptoReady = Promise.resolve(false);
+          this.clearCachedChatPassword(true);
           this.session = undefined;
           this.refresh();
         });
@@ -471,11 +609,16 @@ const ClientUIMixin = superclass => class extends superclass {
         target[key] = value;
     });
 
-    return $.ajax({
+    const request = $.ajax({
       url: "/session-settings",
       type: "POST",
       contentType: "application/json",
       data: JSON.stringify(normalised)
+    });
+    return request.then(result => {
+      if (Object.prototype.hasOwnProperty.call(normalised, "chat_key_cache"))
+        this.applyChatPasswordPreference(normalised.chat_key_cache);
+      return result;
     });
   }
 };
