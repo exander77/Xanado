@@ -272,6 +272,69 @@ body.games-ui {
   font-weight: bold;
 }
 
+#gamesKnown {
+  clear: both;
+}
+
+@media (max-width: 768px) {
+  body.games-ui {
+    margin-left: 1em;
+    margin-right: 1em;
+    font-size: 1em;
+  }
+
+  #signinState {
+    float: none;
+    text-align: center;
+  }
+
+  .games-ui .dialog-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+  }
+
+  .games-ui .dialog-row button {
+    width: 100%;
+  }
+
+  #gamesList {
+    box-shadow: none;
+    border-spacing: 0;
+  }
+
+  #gamesList thead {
+    display: none;
+  }
+
+  #gamesList tr {
+    display: block;
+    margin-bottom: 1em;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  #gamesList td {
+    display: flex;
+    justify-content: space-between;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    padding: 0.6em;
+  }
+
+  #gamesList td:last-child {
+    border-bottom: none;
+  }
+
+  #gamesList td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    margin-right: 0.75em;
+    text-transform: uppercase;
+  }
+}
+
 /* Style list of invitees in the InvitePlayersDialog */
 .invitee:after {
   content: ", ";

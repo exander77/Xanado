@@ -45,6 +45,7 @@ const DEFAULT_CONFIG = {
   games: path.join(__dirname, "..", "games"),
   chats: path.join(__dirname, "..", "chats"),
   maxAge: 14 * 24 * 60 * 60 * 1000, // 2 weeks
+  games_list_days: 7,
   game_defaults: Game.DEFAULTS,
   // Defaults passed to the UI without processing by the server
   user_defaults: {

@@ -268,13 +268,31 @@ const GamesUIMixin = superclass => class extends superclass {
     let $gt = $("#gamesList > tbody");
     $gt.empty();
 
-    const games = simples.map(
-      simple => BrowserGame.fromJsonable(simple, BrowserGame.CLASSES))
-          .sort((a, b) => a.creationTimestamp < b.creationTimestamp ? -1 :
-                a.creationTimestamp > b.creationTimestamp ? 1 : 0);
+    const headers = $("#gamesList thead th")
+    .map((_, th) => {
+      const $th = $(th);
+      return $th.text().trim() || $th.data("i18n") || "";
+    })
+    .get();
+
+    const games = simples
+    .map(simple => BrowserGame.fromJsonable(simple, BrowserGame.CLASSES))
+    .sort((a, b) => {
+      const activityA = Number(a.lastActivity || a.creationTimestamp || 0);
+      const activityB = Number(b.lastActivity || b.creationTimestamp || 0);
+      if (activityA === activityB)
+        return 0;
+      return activityA < activityB ? 1 : -1;
+    });
 
     games.forEach(game => {
       const $row = this.$gameTableRow(game);
+      if (headers.length > 0) {
+        $row.children("td").each((idx, cell) => {
+          if (headers[idx])
+            cell.setAttribute("data-label", headers[idx]);
+        });
+      }
       $gt.append($row);
     });
 

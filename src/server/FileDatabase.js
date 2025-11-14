@@ -38,6 +38,36 @@ class FileDatabase /* extends Database */ {
           .map(fn => fn.replace(this.re, "")));
   }
 
+  /**
+   * Get keys whose files have been modified within the last `ageMs`
+   * milliseconds. If `ageMs` <= 0, all keys are returned.
+   * @param {number} ageMs maximum age in milliseconds
+   * @return {Promise<string[]>}
+   */
+  recentKeys(ageMs) {
+    if (typeof ageMs !== "number" || ageMs <= 0)
+      return this.keys();
+    const cutoff = Date.now() - ageMs;
+    return Fs.readdir(this.directory)
+    .then(list =>
+      Promise.all(
+        list
+        .filter(f => this.re.test(f))
+        .map(fn => {
+          const full = path.join(this.directory, fn);
+          return Fs.stat(full)
+          .then(stat => ({
+            key: fn.replace(this.re, ""),
+            mtime: stat.mtimeMs
+          }))
+          .catch(() => undefined);
+        })))
+    .then(entries =>
+      entries
+      .filter(entry => entry && entry.mtime >= cutoff)
+      .map(entry => entry.key));
+  }
+
   /** See {@linkcode Database#set|Database.set} for documentation */
   set(key, data) {
     assert(!/^\./.test(key));
@@ -85,5 +115,4 @@ class FileDatabase /* extends Database */ {
 }
 
 export { FileDatabase }
-
 

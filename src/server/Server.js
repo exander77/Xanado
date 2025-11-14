@@ -140,6 +140,12 @@ class Server {
       : CHAT_HISTORY_LIMIT_DEFAULT;
     this.chatLegacyConverted = new Set();
 
+    const configuredListDays = Number(config.games_list_days);
+    this.gameListMaxAgeMs = Number.isFinite(configuredListDays)
+      && configuredListDays > 0
+      ? configuredListDays * 24 * 60 * 60 * 1000
+      : 0;
+
     // Add a couple of dynamically computed defaults that need to
     // be sent with /defaults/:user
     config.user_defaults.canEmail = (typeof config.mail !== "undefined");
@@ -806,9 +812,13 @@ class Server {
   GET_games(req, res) {
     const send = req.params.send;
     // Make list of keys we are interested in
-    return ((send === "all" || send === "active")
-            ? this.db.keys()
-            : Promise.resolve([send]))
+    const keysPromise =
+          (send === "all" || send === "active")
+          ? (this.gameListMaxAgeMs > 0
+             ? this.db.recentKeys(this.gameListMaxAgeMs)
+             : this.db.keys())
+          : Promise.resolve([send]);
+    return keysPromise
     // Load those games
     .then(keys => Promise.all(
       keys.map(
