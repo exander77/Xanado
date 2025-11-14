@@ -219,10 +219,14 @@ class StubServer {
     this.jQueryAjax = jQuery.ajax;
     this.expected = expects || {};
     this.received = {};
+    this.debug = process.env.STUBSERVER_DEBUG === "1";
+    this.trace = process.env.STUBSERVER_TRACE === "1";
 
     assert($.ajax);
     assert.equal(jQuery.ajax, $.ajax);
     $.ajax = (args) => {
+      if (this.trace)
+        console.debug("AJAX", args.url);
       if (/^file:/.test(args.url)) {
         args.url = args.url.replace("file://", "");
       } else if (this.expected[args.url]) {
@@ -272,7 +276,8 @@ class StubServer {
         for (const f in self.expected) {
           if (!self.received[f]) {
             unsaw = true;
-            //console.debug(`Awaiting "${f}"`);
+            if (self.debug)
+              console.debug(`Awaiting "${f}"`);
           }
         }
         if (unsaw) {

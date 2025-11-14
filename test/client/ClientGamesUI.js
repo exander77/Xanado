@@ -101,6 +101,7 @@ describe("client/ClientGamesUI", () => {
     ui.channel = new TestSocket("client");
 
     return ui.create()
+    .then(() => ui.refresh())
     .then(() => expectDialog(
       "LoginDialog",
       () => {

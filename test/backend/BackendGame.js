@@ -33,7 +33,8 @@ describe("backend/BackendGame", () => {
 			//_debug: console.debug,
 			edition:"Test",
 			dictionary:"Oxford_5000",
-			_noPlayerShuffle: true
+			_noPlayerShuffle: true,
+			wordCheck: "none"
 		});
 		const human1 = new Player({
 			name:"Human 1", key:"human1", isRobot: false}, BackendGame.CLASSES);
@@ -103,7 +104,8 @@ describe("backend/BackendGame", () => {
 			//_debug: console.debug,
 			edition:"Test",
 			dictionary:"Oxford_5000",
-			_noPlayerShuffle: true
+			_noPlayerShuffle: true,
+			wordCheck: "none"
 		});
 		const human1 = new Player({
 			name: "Human 1", key: "human1", isRobot: false}, BackendGame.CLASSES);
@@ -392,4 +394,3 @@ describe("backend/BackendGame", () => {
     });
   });
 });
-
