@@ -248,6 +248,19 @@ describe("server/UserManager", () => {
     })
     .then(res => {
       assert.equal(res.status, 200);
+      sparseEqual(res.body, { sausages: "bratwurst" });
+
+      return chai.request(server.express)
+      .post("/session-settings")
+      .set('Cookie', cookie)
+      .send({ layout: "contrast" });
+    })
+    .then(res => {
+      assert.equal(res.status, 200);
+      sparseEqual(res.body, {
+        sausages: "bratwurst",
+        layout: "contrast"
+      });
 
       return chai.request(server.express)
       .get("/session")
@@ -258,7 +271,10 @@ describe("server/UserManager", () => {
       sparseEqual(res.body, {
         name: "test_user",
         provider: "xanado",
-        settings: { sausages: "bratwurst" }
+        settings: {
+          sausages: "bratwurst",
+          layout: "contrast"
+        }
       });
       assert(res.body.key.length > 1);
     });

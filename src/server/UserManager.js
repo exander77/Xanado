@@ -1089,13 +1089,25 @@ class UserManager {
   POST_session_settings(req, res) {
     if (req.user) {
       const incoming = Object.assign({}, req.body || {});
-      if (typeof incoming.language !== "string"
-          || incoming.language.trim() === "")
-        incoming.language = "en";
-      req.user.settings = incoming;
+      if ("language" in incoming) {
+        if (typeof incoming.language !== "string"
+            || incoming.language.trim() === "")
+          incoming.language = "en";
+        else
+          incoming.language = incoming.language.trim();
+      }
+      const merged = Object.assign({}, req.user.settings || {});
+      Object.keys(incoming).forEach(key => {
+        const value = incoming[key];
+        if (typeof value === "undefined")
+          delete merged[key];
+        else
+          merged[key] = value;
+      });
+      req.user.settings = merged;
       return this.getUser(req.user)
       .then(user => {
-        user.settings = incoming;
+        user.settings = merged;
         /* c8 ignore next 2 */
         if (this.debug)
           this.debug("UserManager: session settings", user);
