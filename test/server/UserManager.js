@@ -12,6 +12,9 @@ global.Platform = ServerPlatform;
 import tmp from "tmp-promise";
 import sparseEqual from "../sparseEqual.js";
 
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const SrpClient = require("secure-remote-password/client");
 import { Server } from "../../src/server/Server.js";
 import { UserManager } from "../../src/server/UserManager.js";
 
@@ -84,12 +87,13 @@ describe("server/UserManager", () => {
       register_password: "test_pass",
       register_email: "test@email.com"
     };
+    const payload = buildRegistrationPayload(details);
 
     const server = new Server(config);
     return chai.request(server.express)
     .post("/register")
     .set('content-type', 'application/x-www-form-urlencoded')
-    .send(details)
+    .send(payload)
     .then(res => {
       assert.equal(res.status, 200);
       sparseEqual(res.body, {
@@ -102,7 +106,7 @@ describe("server/UserManager", () => {
     .then(() => chai.request(server.express)
           .post("/register")
           .set('content-type', 'application/x-www-form-urlencoded')
-          .send(details))
+          .send(payload))
     .then(res => {
       assert.equal(res.status, 403);
       assert.deepEqual(res.body, [
@@ -110,12 +114,28 @@ describe("server/UserManager", () => {
     });
   });
 
+  function buildRegistrationPayload(user) {
+    const password = typeof user.register_password === "string"
+      ? user.register_password : "";
+    const salt = SrpClient.generateSalt();
+    const privateKey = SrpClient.derivePrivateKey(
+      salt, user.register_username, password);
+    const verifier = SrpClient.deriveVerifier(privateKey);
+    return {
+      register_username: user.register_username,
+      register_email: user.register_email,
+      srp_salt: salt,
+      srp_verifier: verifier
+    };
+  }
+
   // Promise to register user. Resolve to server.
   function register(server, user) {
+    const payload = buildRegistrationPayload(user);
     return chai.request(server.express)
     .post("/register")
     .set('content-type', 'application/x-www-form-urlencoded')
-    .send(user)
+    .send(payload)
     .then(res => {
       assert.equal(res.status, 200);
       sparseEqual(res.body, {
@@ -130,12 +150,79 @@ describe("server/UserManager", () => {
 
   // Promise to signin user. Resolve to cookie.
   function signin(server, user) {
+    const username = user.signin_username;
+    const password = typeof user.signin_password === "string"
+      ? user.signin_password : "";
+    const clientEphemeral = SrpClient.generateEphemeral();
     return chai.request(server.express)
-    .post("/signin")
-    .send(user)
+    .post("/signin/start")
+    .send({
+      signin_username: username,
+      clientPublicEphemeral: clientEphemeral.public
+    })
     .then(res => {
       assert.equal(res.status, 200);
-      return res.header["set-cookie"];
+      const salt = res.body.salt;
+      const serverPublic = res.body.serverPublicEphemeral;
+      const privateKey = SrpClient.derivePrivateKey(
+        salt, username, password);
+      const clientSession = SrpClient.deriveSession(
+        clientEphemeral.secret,
+        serverPublic,
+        salt,
+        username,
+        privateKey);
+      return chai.request(server.express)
+      .post("/signin/finish")
+      .send({
+        signin_username: username,
+        clientPublicEphemeral: clientEphemeral.public,
+        clientSessionProof: clientSession.proof
+      })
+      .then(res2 => {
+        assert.equal(res2.status, 200);
+        SrpClient.verifySession(
+          clientEphemeral.public,
+          clientSession,
+          res2.body.proof);
+        return res2.header["set-cookie"];
+      });
+    });
+  }
+
+  function signinExpectFailure(server, user) {
+    const username = user.signin_username;
+    const password = typeof user.signin_password === "string"
+      ? user.signin_password : "";
+    const clientEphemeral = SrpClient.generateEphemeral();
+    return chai.request(server.express)
+    .post("/signin/start")
+    .send({
+      signin_username: username,
+      clientPublicEphemeral: clientEphemeral.public
+    })
+    .then(res => {
+      assert.equal(res.status, 200);
+      const salt = res.body.salt;
+      const serverPublic = res.body.serverPublicEphemeral;
+      const privateKey = SrpClient.derivePrivateKey(
+        salt, username, password);
+      const clientSession = SrpClient.deriveSession(
+        clientEphemeral.secret,
+        serverPublic,
+        salt,
+        username,
+        privateKey);
+      return chai.request(server.express)
+      .post("/signin/finish")
+      .send({
+        signin_username: username,
+        clientPublicEphemeral: clientEphemeral.public,
+        clientSessionProof: clientSession.proof
+      })
+      .then(res2 => {
+        assert.equal(res2.status, 401);
+      });
     });
   }
 
@@ -151,12 +238,26 @@ describe("server/UserManager", () => {
     });
   }
 
+  function buildSrpUpdate(username, password) {
+    const salt = SrpClient.generateSalt();
+    const privateKey = SrpClient.derivePrivateKey(
+      salt, username, password);
+    const verifier = SrpClient.deriveVerifier(privateKey);
+    return {
+      srp_salt: salt,
+      srp_verifier: verifier
+    };
+  }
+
   it("/register new username", () => {
     const server = new Server(config);
+    const payload = buildRegistrationPayload({
+      register_username: "test_user"
+    });
     return chai.request(server.express)
     .post("/register")
     .set('content-type', 'application/x-www-form-urlencoded')
-    .send({register_username: "test_user"})
+    .send(payload)
     .then(res => {
       assert.equal(res.status, 200);
       sparseEqual(res.body, {
@@ -177,16 +278,10 @@ describe("server/UserManager", () => {
     })
 
     // Wrong password
-    .then(() => chai.request(server.express)
-          .post("/signin?origin=greatapes")
-          .send({
-            signin_username: "test_user",
-            signin_password: "wrong_pass"
-          }))
-    .then(res => {
-      assert.equal(res.status, 401);
-      // NO! assert.deepEqual(res.body, ["Not signed in"]);
-    })
+    .then(() => signinExpectFailure(server, {
+      signin_username: "test_user",
+      signin_password: "wrong_pass"
+    }))
     // Right password
     .then(() => signin(server, {
       signin_username: "test_user", signin_password: "test_pass"
@@ -214,17 +309,11 @@ describe("server/UserManager", () => {
         register_email: "test2@email.com"
       });
     })
-    .then(() => chai.request(server.express)
-          .post("/signin")
-          .send({
-            signin_username: "test2_user",
-            signin_password: "wrong_pass"
-          }))
-    .then(res => {
-      assert.equal(res.status, 401);
-      // NO! assert.deepEqual(res.body, ["Not signed in"]);
-      return signin(server, { signin_username: "test2_user" });
-    });
+    .then(() => signinExpectFailure(server, {
+      signin_username: "test2_user",
+      signin_password: "wrong_pass"
+    }))
+    .then(() => signin(server, { signin_username: "test2_user" }));
   });
 
   it("signed in /session-settings and /session", () => {
@@ -401,7 +490,7 @@ describe("server/UserManager", () => {
     })
     .then(() => chai.request(server.express)
           .post("/change-password")
-          .send({password: "wtf"}))
+          .send(buildSrpUpdate("test_user", "wtf")))
     .then(res => {
       assert.equal(res.status, 401);
       sparseEqual(res.body, ["Not signed in"]);
@@ -417,7 +506,7 @@ describe("server/UserManager", () => {
       return chai.request(server.express)
       .post("/change-password")
       .set('Cookie', cookie)
-      .send({password: "wtf"});
+      .send(buildSrpUpdate("test_user", "wtf"));
     })
     .then(res => {
       assert.equal(res.status, 200);
@@ -439,16 +528,10 @@ describe("server/UserManager", () => {
     .then(res => {
       assert.equal(res.status, 404);
 
-      return chai.request(server.express)
-      .post("/signin")
-      .send({
+      return signinExpectFailure(server, {
         signin_username: "test_user",
         signin_password: "test_pass"
       });
-    })
-    .then(res => {
-      assert.equal(res.status, 401);
-      // NO! assert.deepEqual(res.body, ["Not signed in"]);
     });
   });
 

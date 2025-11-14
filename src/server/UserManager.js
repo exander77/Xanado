@@ -14,14 +14,13 @@ import {
 } from "fs";
 import { lock } from "proper-lockfile";
 import AsyncLock from "async-lock";
-import { hash, compare } from "bcrypt";
 import Session from "express-session";
 import SessionFileStore from "session-file-store";
 import Cookie from "cookie";
 import Passport from "passport";
-import { Strategy } from "passport-strategy";
 import Path from "path";
 import { fileURLToPath } from 'url';
+import { createRequire } from "module";
 import {
   randomBytes,
   createCipheriv,
@@ -32,6 +31,10 @@ const __dirname = Path.dirname(fileURLToPath(import.meta.url));
 
 import { genKey, stringify } from "../common/Utils.js";
 
+const require = createRequire(import.meta.url);
+const SrpServer = require("secure-remote-password/server");
+const SrpClient = require("secure-remote-password/client");
+
 function hasDebug(config, flag) {
   if (config && config.debugSet instanceof Set)
     return config.debugSet.has(flag) || config.debugSet.has("all");
@@ -40,20 +43,6 @@ function hasDebug(config, flag) {
 }
 
 const dbLock = new AsyncLock();
-
-function pw_hash(pw) {
-  if (typeof pw === "undefined")
-    return Promise.resolve(pw);
-  else
-    return hash(pw, 10);
-}
-
-function pw_compare(pw, hash) {
-  if (typeof pw === "undefined")
-    return Promise.resolve(typeof hash === "undefined");
-  else
-    return compare(pw, hash);
-}
 
 const SESSION_COOKIE = "XANADO.sid";
 
@@ -78,46 +67,9 @@ const CHAT_PBKDF2_ITERATIONS = 210000;
 const CHAT_PBKDF2_SALT_BYTES = 16;
 
 /**
- * This a Passport strategy, radically cut-down from passport-local.
- * It is required because `passport-local` signins fail on null password,
- * and we specifically want to support this.
- * @extends Passport.Strategy
- */
-class XanadoPass extends Strategy {
-
-  /**
-   * @param {function} checkUserPass function used to check name and pass
-   * @param {function} checkUserToken function used to check reset token
-   */
-  constructor(checkUserPass, checkToken) {
-    super();
-    this.name = "xanado";
-    this._checkUserPass = checkUserPass;
-    this._checkToken = checkToken;
-  }
-
-  /*
-   * @param {Request} req incoming signin request
-   */
-  authenticate(req) {
-    let promise;
-    if (req.body.signin_username)
-      promise = this._checkUserPass(
-        req.body.signin_username, req.body.signin_password);
-    else
-      promise = this._checkToken(req.params.token);
-    return promise.then(uo => this.success(uo))
-    .catch (e => {
-      //console.assert(false, `${user}: ${e.message}`);
-      this.fail(e.message);
-    });
-  }
-}
-
-/**
  * Manage user signin, registration, password reset using Express
  * and Passport. User object will be kept in req, and contains
- * `{ name:, email:, key:, pass: }`
+ * `{ name:, email:, key:, srpSalt:, srpVerifier: }`
  *
  * This makes no pretence of being secure, it is simply a means to
  * manage simple player signin to a game. The following HTTP status
@@ -125,7 +77,8 @@ class XanadoPass extends Strategy {
  *
  * Routes specific to XANADO users are:
  * * {@linkcode UserManager#POST_register|POST /register}
- * * {@linkcode UserManager#POST_signin|POST /signin}
+ * * {@linkcode UserManager#POST_srp_start|POST /signin/start}
+ * * {@linkcode UserManager#POST_srp_finish|POST /signin/finish}
  * * {@linkcode UserManager#POST_change_password|POST /change-password}
  * * {@linkcode UserManager#POST_reset_password|GET /password-reset/:token}
  * * {@linkcode UserManager#GET_users|GET /users}
@@ -261,6 +214,59 @@ class UserManager {
     return true;
   }
 
+  normalizeHex(value) {
+    if (typeof value !== "string")
+      return "";
+    return value.trim().toUpperCase();
+  }
+
+  isHex(value) {
+    return typeof value === "string" && /^[0-9A-F]+$/.test(value);
+  }
+
+  prepareSrpCredentials(salt, verifier) {
+    const normalizedSalt = this.normalizeHex(salt);
+    const normalizedVerifier = this.normalizeHex(verifier);
+    if (!this.isHex(normalizedSalt) || !this.isHex(normalizedVerifier))
+      return null;
+    return {
+      salt: normalizedSalt,
+      verifier: normalizedVerifier
+    };
+  }
+
+  fakeSrpCredentials(username) {
+    const salt = SrpClient.generateSalt();
+    const dummyPassword = SrpClient.generateSalt();
+    const privateKey = SrpClient.derivePrivateKey(
+      salt, username, dummyPassword);
+    const verifier = SrpClient.deriveVerifier(privateKey);
+    return { salt, verifier };
+  }
+
+  getSrpChallengeData(user, username) {
+    if (user && user.srpSalt && user.srpVerifier) {
+      return {
+        salt: user.srpSalt,
+        verifier: user.srpVerifier,
+        valid: true,
+        userKey: user.key
+      };
+    }
+    const fake = this.fakeSrpCredentials(username);
+    return {
+      salt: fake.salt,
+      verifier: fake.verifier,
+      valid: false,
+      userKey: undefined
+    };
+  }
+
+  clearSrpState(req) {
+    if (req.session && req.session.srp)
+      delete req.session.srp;
+  }
+
   /**
    * Return a redacted copy of the encryption bundle suitable for sending
    * to the browser.
@@ -339,10 +345,6 @@ class UserManager {
       done(null, userObject);
     });
 
-    Passport.use(new XanadoPass(
-      (user, pass) => this.getUser({ name: user, pass: pass }),
-      token => this.getUser({ token: token })));
-
     // Load and configure oauth2 strategies
     const strategies = [];
     if (this.config.auth && this.config.auth.oauth2) {
@@ -394,14 +396,13 @@ class UserManager {
       "/public-keys",
       (req, res) => this.GET_public_keys(req, res));
 
-    // Log in a user
     app.post(
-      "/signin",
-      Passport.authenticate("xanado", {
-        // Assign this property in req
-        assignProperty: "userObject"
-      }),
-      (req, res) => this.POST_signin(req, res));
+      "/signin/start",
+      (req, res) => this.POST_srp_start(req, res));
+
+    app.post(
+      "/signin/finish",
+      (req, res) => this.POST_srp_finish(req, res));
 
     /* c8 ignore start */
     app.get(
@@ -545,7 +546,7 @@ class UserManager {
    * @param {string?} desc.email user email
    * @return {Promise} resolve to user object, or throw
    */
-  getUser(desc, ignorePass) {
+  getUser(desc) {
     const requestedName =
           (typeof desc.name === "string") ? desc.name.toLowerCase() : undefined;
     return this.getDB()
@@ -567,28 +568,8 @@ class UserManager {
 
         if (typeof requestedName !== "undefined"
             && typeof uo.name === "string"
-            && uo.name.toLowerCase() === requestedName) {
-
-          if (ignorePass)
-            return uo;
-          if (typeof uo.pass === "undefined") {
-            if (desc.pass === uo.pass)
-              return uo;
-            throw new Error(/*i18n*/"wrong-pass");
-          }
-          return pw_compare(desc.pass, uo.pass)
-          .then(ok => {
-            if (ok)
-              return uo;
-            throw new Error(/*i18n*/"wrong-pass");
-          })
-          .catch(e => {
-            /* c8 ignore next 2 */
-            if (this.debug)
-              this.debug("UserManager: getUser", desc, "failed; bad pass", e);
-            throw new Error(/*i18n*/"wrong-pass");
-          });
-        }
+            && uo.name.toLowerCase() === requestedName)
+          return uo;
 
         if (typeof desc.email !== "undefined"
             && uo.email === desc.email)
@@ -800,22 +781,21 @@ class UserManager {
    * @param {object} desc user descriptor
    * @param {string} desc.user user name
    * @param {string} desc.provider authentication provider e.g. google
-   * @param {string?} desc.pass user password, requires user.
-   * Will be encrypted if defined before saving.
+   * @param {string} desc.srpSalt SRP salt
+   * @param {string} desc.srpVerifier SRP verifier
    * @param {string?} desc.email user email
    * @param {string?} key optionally force the key to this
    * @return {Promise} resolve to user object, or reject if duplicate
    */
   addUser(desc) {
+    if (!desc.srpSalt || !desc.srpVerifier)
+      throw new Error("Missing SRP credentials");
     return this.getDB()
     .then(() => {
       if (!desc.key)
         desc.key = genKey(this.db.map(f => f.key));
-      return pw_hash(desc.pass);
-    })
-    .then(pw => {
-      if (typeof pw !== "undefined")
-        desc.pass = pw;
+      desc.srpSalt = this.normalizeHex(desc.srpSalt);
+      desc.srpVerifier = this.normalizeHex(desc.srpVerifier);
       /* c8 ignore next 2 */
       if (this.debug)
         this.debug("UserManager: add user", desc);
@@ -840,18 +820,22 @@ class UserManager {
    * Handle registration of a user using Xanado password database
    * @param {Request} req The body of the
    * request must contain `register_username` and may contain
-   * `register_email` and `register_password`.
+   * `register_email`. It must also contain `srp_salt`
+   * and `srp_verifier`.
    * @param {Response} res
    * @private
    */
   POST_register(req, res) {
     const username = req.body.register_username;
     const email = req.body.register_email;
-    const pass = req.body.register_password;
     if (!username)
       return this.sendResult(
         res, 403, [ /*i18n*/"bad-user", username ]);
-    return this.getUser({name: username }, true)
+    const srp = this.prepareSrpCredentials(
+      req.body.srp_salt, req.body.srp_verifier);
+    if (!srp)
+      return this.sendResult(res, 400, [ "Invalid SRP credentials" ]);
+    return this.getUser({name: username })
     .then(() => {
       this.sendResult(
         res, 403, [ /*i18n*/"already-registered", username ]);
@@ -862,7 +846,8 @@ class UserManager {
         name: username,
         email: email,
         provider: "xanado",
-        pass: pass
+        srpSalt: srp.salt,
+        srpVerifier: srp.verifier
       })
       .then(userObject =>
         this.passportLogin(req, res, userObject)
@@ -944,26 +929,79 @@ class UserManager {
     });
   }
 
-  /**
-   * Handle XANADO signin.
-   * @param {Request} req The body of the request
-   * must contain `signin_username` and `signin_password`
-   * fields. BasicAuth is NOT supported.
-   * @param {Response} res response
-   * @private
-  */
-  POST_signin(req, res) {
-    // error in passport will -> 401
-    req.userObject.provider = "xanado";
-    // Have to call .signin or the cookie doesn't get set
-    return this.passportLogin(req, res, req.userObject)
-    .then(() => this.sendResult(res, 200, []));
+  POST_srp_start(req, res) {
+    const username = (req.body && req.body.signin_username
+                      ? `${req.body.signin_username}`.trim()
+                      : "");
+    const clientPublic = req.body && req.body.clientPublicEphemeral;
+    if (!username || typeof clientPublic !== "string"
+        || clientPublic.length === 0)
+      return this.sendResult(res, 400, [ "Invalid SRP parameters" ]);
+    return this.getUser({ name: username })
+    .catch(() => undefined)
+    .then(user => {
+      const challenge = this.getSrpChallengeData(user, username);
+      const serverEphemeral = SrpServer.generateEphemeral(challenge.verifier);
+      if (!req.session)
+        req.session = {};
+      req.session.srp = {
+        username,
+        clientPublicEphemeral: clientPublic,
+        serverSecretEphemeral: serverEphemeral.secret,
+        salt: challenge.salt,
+        verifier: challenge.verifier,
+        userKey: challenge.valid ? challenge.userKey : undefined
+      };
+      return this.sendResult(res, 200, {
+        salt: challenge.salt,
+        serverPublicEphemeral: serverEphemeral.public
+      });
+    });
+  }
+
+  POST_srp_finish(req, res) {
+    const username = (req.body && req.body.signin_username
+                      ? `${req.body.signin_username}`.trim()
+                      : "");
+    const clientPublic = req.body && req.body.clientPublicEphemeral;
+    const clientProof = req.body && req.body.clientSessionProof;
+    const state = req.session && req.session.srp;
+    if (!username || typeof clientPublic !== "string"
+        || typeof clientProof !== "string"
+        || !state || state.username !== username
+        || state.clientPublicEphemeral !== clientPublic)
+      return this.sendResult(res, 400, [ "Invalid SRP session" ]);
+    let serverSession;
+    try {
+      serverSession = SrpServer.deriveSession(
+        state.serverSecretEphemeral,
+        clientPublic,
+        state.salt,
+        state.username,
+        state.verifier,
+        clientProof);
+    } catch (e) {
+      this.clearSrpState(req);
+      return this.sendResult(res, 401, [ /*i18n*/"wrong-pass" ]);
+    }
+    this.clearSrpState(req);
+    if (!state.userKey)
+      return this.sendResult(res, 401, [ /*i18n*/"wrong-pass" ]);
+    return this.getUser({ key: state.userKey })
+    .then(user => {
+      user.provider = "xanado";
+      return this.passportLogin(req, res, user)
+      .then(() => this.sendResult(res, 200, {
+        proof: serverSession.proof
+      }));
+    })
+    .catch(() => this.sendResult(res, 401, [ /*i18n*/"wrong-pass" ]));
   }
 
   /**
    * Change the current users' password.
-   * @param {Request} req The request body must contain `password`,
-   * the new password
+   * @param {Request} req The request body must contain
+   * `srp_salt` and `srp_verifier`
    * @param {Response} res
    * @private
    */
@@ -971,21 +1009,23 @@ class UserManager {
     if (req.session
         && req.session.passport
         && req.session.passport.user) {
-      const pass = req.body.password;
+      const srp = this.prepareSrpCredentials(
+        req.body.srp_salt, req.body.srp_verifier);
+      if (!srp)
+        return this.sendResult(res, 400, [ "Invalid SRP credentials" ]);
       const userObject = req.session.passport.user;
       /* c8 ignore next 2 */
       if (this.debug)
         this.debug("UserManager: changing pw for",
                    userObject.name, userObject.key);
-      return pw_hash(pass)
-      .then(hash => {
-        userObject.pass = hash;
-        userObject.encryption = undefined;
-      })
-      .then(() => this.getUser(userObject))
+      return this.getUser(userObject)
       .then(uo => {
-        uo.pass = userObject.pass;
+        uo.srpSalt = srp.salt;
+        uo.srpVerifier = srp.verifier;
         uo.encryption = undefined;
+        userObject.srpSalt = srp.salt;
+        userObject.srpVerifier = srp.verifier;
+        userObject.encryption = undefined;
       })
       .then(() => this.writeDB())
       .then(() => this.sendResult(res, 200, [

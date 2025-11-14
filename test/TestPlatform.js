@@ -46,12 +46,17 @@ function setupPlatform(){
     Promise.all([
       import("fs"),
       import("tmp-promise"),
-      import("node-localstorage")
+      import("node-localstorage"),
+      import("module")
     ])
     .then(mods => {
       Fs = mods[0].promises;
       const tmp = mods[1].default;
       const LocalStorage = mods[2].LocalStorage;
+      const { createRequire } = mods[3];
+      const require = createRequire(import.meta.url);
+      if (typeof global.Worker === "undefined")
+        global.Worker = require("web-worker");
       return tmp.dir()
       .then(d => {
         const ls = new LocalStorage(d.path);

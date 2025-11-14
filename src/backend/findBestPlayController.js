@@ -4,12 +4,6 @@
 
 /* global Platform */
 
-/* eslint-disable */
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-const Worker = require("web-worker");
-/* eslint-enable */
-
 import { BackendGame } from "./BackendGame.js";
 import { CBOR } from "../game/CBOR.js";
 
@@ -23,8 +17,15 @@ import { CBOR } from "../game/CBOR.js";
 function findBestPlay(
   game, letters, listener, dictionary) {
 
+  const WorkerCtor = (typeof globalThis !== "undefined"
+                      && globalThis.Worker)
+        ? globalThis.Worker
+        : (typeof Worker !== "undefined" ? Worker : undefined);
+  if (!WorkerCtor)
+    throw new Error("No Worker implementation available");
+
   return new Promise((resolve, reject) => {
-    const worker = new Worker(
+    const worker = new WorkerCtor(
       new URL("./findBestPlayWorker.js", import.meta.url),
       { type: "module" });
 

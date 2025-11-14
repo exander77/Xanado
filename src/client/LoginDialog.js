@@ -6,6 +6,7 @@
 import { Dialog } from "../browser/Dialog.js";
 import { PasswordMixin } from "./PasswordMixin.js";
 import { CHAT_PASSWORD_CACHE_KEY } from "../browser/chat/ChatCrypto.js";
+import SRPClient from "secure-remote-password/client.js";
 
 /**
  * @extends Dialog
@@ -14,11 +15,6 @@ import { CHAT_PASSWORD_CACHE_KEY } from "../browser/chat/ChatCrypto.js";
 class LoginDialog extends PasswordMixin(Dialog) {
 
   constructor(options) {
-    options.onSubmit = () => {
-      const action = this.getAction();
-      this.options.postAction = action;
-      this.cachePasswordForAction(action);
-    };
     super("LoginDialog", $.extend({
       title: $.i18n("Sign in")
     }, options));
@@ -106,6 +102,111 @@ class LoginDialog extends PasswordMixin(Dialog) {
       if ($firstField.length)
         $firstField.trigger("focus");
     });
+  }
+
+  submit(vals) {
+    const action = this.getAction();
+    if (action === "/reset-password") {
+      super.submit(vals);
+      return;
+    }
+    vals = this.getFieldValues(vals);
+    if (action === "/signin")
+      this.handleSignin(vals);
+    else if (action === "/register")
+      this.handleRegister(vals);
+  }
+
+  handleSignin(vals) {
+    const username = (vals.signin_username || "").trim();
+    const password = vals.signin_password || "";
+    if (!username || password.length === 0) {
+      this.handleAuthError(new Error($.i18n
+        ? $.i18n("wrong-pass")
+        : "Missing credentials"));
+      return;
+    }
+    const clientEphemeral = SRPClient.generateEphemeral();
+    this.postJSON("/signin/start", {
+      signin_username: username,
+      clientPublicEphemeral: clientEphemeral.public
+    })
+    .then(response => {
+      const { salt, serverPublicEphemeral } = response;
+      const privateKey = SRPClient.derivePrivateKey(
+        salt, username, password);
+      const clientSession = SRPClient.deriveSession(
+        clientEphemeral.secret,
+        serverPublicEphemeral,
+        salt,
+        username,
+        privateKey);
+      return this.postJSON("/signin/finish", {
+        signin_username: username,
+        clientPublicEphemeral: clientEphemeral.public,
+        clientSessionProof: clientSession.proof
+      })
+      .then(result => {
+        SRPClient.verifySession(
+          clientEphemeral.public,
+          clientSession,
+          result.proof);
+        this.cachePasswordForAction("/signin");
+        this.$dlg.dialog("close");
+        window.location.reload();
+      });
+    })
+    .catch(e => this.handleAuthError(e));
+  }
+
+  handleRegister(vals) {
+    const username = (vals.register_username || "").trim();
+    const email = (vals.register_email || "").trim();
+    const password = vals.register_password || "";
+    if (!username || password.length === 0) {
+      this.handleAuthError(new Error($.i18n
+        ? $.i18n("wrong-pass")
+        : "Missing credentials"));
+      return;
+    }
+    const srp = this.createSrpCredentials(username, password);
+    this.postJSON("/register", {
+      register_username: username,
+      register_email: email,
+      srp_salt: srp.salt,
+      srp_verifier: srp.verifier
+    })
+    .then(() => {
+      this.cachePasswordForAction("/register");
+      this.$dlg.dialog("close");
+      window.location.reload();
+    })
+    .catch(e => this.handleAuthError(e));
+  }
+
+  createSrpCredentials(username, password) {
+    const salt = SRPClient.generateSalt();
+    const privateKey = SRPClient.derivePrivateKey(
+      salt, username, password);
+    const verifier = SRPClient.deriveVerifier(privateKey);
+    return { salt, verifier };
+  }
+
+  postJSON(url, data) {
+    return $.ajax({
+      url: url,
+      type: "POST",
+      contentType: "application/json",
+      dataType: "json",
+      data: JSON.stringify(data)
+    });
+  }
+
+  handleAuthError(error) {
+    if (this.options && typeof this.options.error === "function")
+      this.options.error(error);
+    else
+      console.error(error);
   }
 }
 

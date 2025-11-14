@@ -17,6 +17,7 @@ import path from "path";
 import os from "os";
 import { promisify } from "util";
 import { execFile } from "child_process";
+import { createRequire } from "module";
 import { Server as SocketServer } from "socket.io";
 import HTTP from "http";
 import HTTPS from "https";
@@ -24,6 +25,9 @@ import nodemailer from "nodemailer";
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const execFileAsync = promisify(execFile);
+const require = createRequire(import.meta.url);
+if (typeof globalThis.Worker === "undefined")
+  globalThis.Worker = require("web-worker");
 
 import jQuery from "jquery";
 global.$ = global.jQuery = jQuery;

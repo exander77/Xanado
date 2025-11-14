@@ -10,6 +10,9 @@ import { ServerPlatform } from "../../src/server/ServerPlatform.js";
 global.Platform = ServerPlatform;
 import tmp from "tmp-promise";
 
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const SrpClient = require("secure-remote-password/client");
 import { TestSocket } from '../TestSocket.js';
 import { Server } from "../../src/server/Server.js";
 import { Game } from "../../src/game/Game.js";
@@ -61,12 +64,28 @@ describe("server/Server.js", () => {
 
   afterEach(() => process.removeAllListeners("unhandledRejection"));
 
+  function buildRegistrationPayload(user) {
+    const password = typeof user.register_password === "string"
+      ? user.register_password : "";
+    const salt = SrpClient.generateSalt();
+    const privateKey = SrpClient.derivePrivateKey(
+      salt, user.register_username, password);
+    const verifier = SrpClient.deriveVerifier(privateKey);
+    return {
+      register_username: user.register_username,
+      register_email: user.register_email,
+      srp_salt: salt,
+      srp_verifier: verifier
+    };
+  }
+
   // Promise to register user. Resolve to user key.
   function register(server, user) {
+    const payload = buildRegistrationPayload(user);
     return chai.request(server.express)
     .post("/register")
     .set('content-type', 'application/x-www-form-urlencoded')
-    .send(user)
+    .send(payload)
     .then(res => {
       assert.equal(res.status, 200);
       sparseEqual(res.body, {
@@ -81,12 +100,43 @@ describe("server/Server.js", () => {
 
   // Promise to signin user. Resolve to session_cookie.
   function signin(server, user) {
+    const username = user.signin_username;
+    const password = typeof user.signin_password === "string"
+      ? user.signin_password : "";
+    const clientEphemeral = SrpClient.generateEphemeral();
     return chai.request(server.express)
-    .post("/signin")
-    .send(user)
+    .post("/signin/start")
+    .send({
+      signin_username: username,
+      clientPublicEphemeral: clientEphemeral.public
+    })
     .then(res => {
       assert.equal(res.status, 200);
-      return res.header["set-cookie"];
+      const salt = res.body.salt;
+      const serverPublic = res.body.serverPublicEphemeral;
+      const privateKey = SrpClient.derivePrivateKey(
+        salt, username, password);
+      const clientSession = SrpClient.deriveSession(
+        clientEphemeral.secret,
+        serverPublic,
+        salt,
+        username,
+        privateKey);
+      return chai.request(server.express)
+      .post("/signin/finish")
+      .send({
+        signin_username: username,
+        clientPublicEphemeral: clientEphemeral.public,
+        clientSessionProof: clientSession.proof
+      })
+      .then(res2 => {
+        assert.equal(res2.status, 200);
+        SrpClient.verifySession(
+          clientEphemeral.public,
+          clientSession,
+          res2.body.proof);
+        return res2.header["set-cookie"];
+      });
     });
   }
 
