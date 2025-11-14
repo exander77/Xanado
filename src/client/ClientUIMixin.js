@@ -201,6 +201,14 @@ const ClientUIMixin = superclass => class extends superclass {
         this.session.encryption = stored;
       if (this.chatCrypto)
         this.chatCrypto.setEncryption(stored);
+      if (this.session
+          && typeof this.session.key === "string"
+          && this.chatCrypto
+          && typeof this.chatCrypto.publicKeyPem === "string") {
+        if (!(this._publicKeyCache instanceof Map))
+          this._publicKeyCache = new Map();
+        this._publicKeyCache.set(this.session.key, this.chatCrypto.publicKeyPem);
+      }
       if (typeof password === "string"
           && this.chatCrypto
           && this.chatCrypto.privateKeyPem) {

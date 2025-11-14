@@ -34,14 +34,22 @@ class ChangePasswordDialog extends PasswordMixin(Dialog) {
         this.options.error(new Error("Password required"));
       return;
     }
-    const username = (this.options.ui
-                      && this.options.ui.session
-                      && this.options.ui.session.name)
-          || "";
-    const srp = this.createSrpCredentials(username, password);
-    this.postJSON("/change-password", {
-      srp_salt: srp.salt,
-      srp_verifier: srp.verifier
+    const usernamePromise = (this.options.ui
+                             && this.options.ui.session
+                             && typeof this.options.ui.session.name === "string")
+      ? Promise.resolve(this.options.ui.session.name)
+      : $.get("/session").then(sess => sess && typeof sess.name === "string" ? sess.name : "");
+
+    usernamePromise
+    .then(name => (name || "").toLowerCase())
+    .then(username => {
+      if (!username || typeof username !== "string")
+        throw new Error("Unable to determine username for password change");
+      const srp = this.createSrpCredentials(username, password);
+      return this.postJSON("/change-password", {
+        srp_salt: srp.salt,
+        srp_verifier: srp.verifier
+      });
     })
     .then(result => {
       if (this.options.ui

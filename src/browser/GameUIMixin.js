@@ -260,7 +260,9 @@ const GameUIMixin = superclass => class extends superclass {
     const canDecrypt = recipientKey
           && this.chatCrypto
           && this.chatCrypto.hasMaterial
-          && message.recipients
+          && Array.isArray(message.recipients
+            ? Object.keys(message.recipients)
+            : [])
           && message.recipients[recipientKey];
     if (!canDecrypt) {
       this.renderEncryptedPlaceholder(message);
@@ -268,8 +270,9 @@ const GameUIMixin = superclass => class extends superclass {
     }
     return this.ensureChatUnlocked(true)
     .then(() => this.chatCrypto.decrypt(message))
-    .then(text => this.renderChatMessage(
-      Object.assign({}, message, { text: text })))
+    .then(text =>
+      this.renderChatMessage(
+        Object.assign({}, message, { text })))
     .catch(() => this.renderEncryptedPlaceholder(message));
   }
 
@@ -352,26 +355,41 @@ const GameUIMixin = superclass => class extends superclass {
     if (!Array.isArray(keys) || keys.length === 0)
       return Promise.resolve({});
     this._publicKeyCache = this._publicKeyCache || new Map();
-    const missing = keys.filter(key => key && !this._publicKeyCache.has(key));
-    const fetcher = missing.length > 0
-          ? $.get("/public-keys", { keys: missing.join(",") })
-          : Promise.resolve({});
-    return fetcher
-    .then(response => {
-      Object.entries(response || {}).forEach(([key, value]) => {
-        if (value)
-          this._publicKeyCache.set(key, value);
-      });
+    const requested = Array.from(new Set(
+      keys
+      .filter(key => typeof key === "string" && key.length > 0)));
+    if (!requested.length)
+      return Promise.resolve({});
+    const resolveFromCache = () => {
       const resolved = {};
-      keys.forEach(key => {
-        if (this._publicKeyCache.has(key))
-          resolved[key] = this._publicKeyCache.get(key);
+      requested.forEach(key => {
+        const cached = this._publicKeyCache.get(key);
+        if (!cached)
+          return;
+        if (typeof cached === "string")
+          resolved[key] = cached;
+        else if (cached && typeof cached.publicKey === "string")
+          resolved[key] = cached.publicKey;
       });
       return resolved;
+    };
+    return $.get("/public-keys", { keys: requested.join(",") })
+    .then(response => {
+      Object.entries(response || {}).forEach(([key, value]) => {
+        if (!value) {
+          this._publicKeyCache.delete(key);
+          return;
+        }
+        if (typeof value === "string")
+          this._publicKeyCache.set(key, value);
+        else if (value && typeof value.publicKey === "string")
+          this._publicKeyCache.set(key, value.publicKey);
+      });
+      return resolveFromCache();
     })
     .catch(e => {
       console.error("Failed to fetch public keys", e);
-      return {};
+      return resolveFromCache();
     });
   }
 

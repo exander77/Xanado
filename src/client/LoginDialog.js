@@ -126,23 +126,24 @@ class LoginDialog extends PasswordMixin(Dialog) {
         : "Missing credentials"));
       return;
     }
+    const normalizedUsername = username.toLowerCase();
     const clientEphemeral = SRPClient.generateEphemeral();
     this.postJSON("/signin/start", {
-      signin_username: username,
+      signin_username: normalizedUsername,
       clientPublicEphemeral: clientEphemeral.public
     })
     .then(response => {
       const { salt, serverPublicEphemeral } = response;
       const privateKey = SRPClient.derivePrivateKey(
-        salt, username, password);
+        salt, normalizedUsername, password);
       const clientSession = SRPClient.deriveSession(
         clientEphemeral.secret,
         serverPublicEphemeral,
         salt,
-        username,
+        normalizedUsername,
         privateKey);
       return this.postJSON("/signin/finish", {
-        signin_username: username,
+        signin_username: normalizedUsername,
         clientPublicEphemeral: clientEphemeral.public,
         clientSessionProof: clientSession.proof
       })
@@ -169,7 +170,8 @@ class LoginDialog extends PasswordMixin(Dialog) {
         : "Missing credentials"));
       return;
     }
-    const srp = this.createSrpCredentials(username, password);
+    const normalizedUsername = username.toLowerCase();
+    const srp = this.createSrpCredentials(normalizedUsername, password);
     this.postJSON("/register", {
       register_username: username,
       register_email: email,
@@ -207,6 +209,16 @@ class LoginDialog extends PasswordMixin(Dialog) {
       this.options.error(error);
     else
       console.error(error);
+    setTimeout(() => {
+      const $pwd = this.$dlg.find("input.is-password:visible").first();
+      const $submit = this.$dlg.find("button.submit:visible").first();
+      if ($pwd.length) {
+        $pwd.trigger("focus");
+        if ($pwd.length)
+          $pwd.get(0).setSelectionRange($pwd.val().length, $pwd.val().length);
+      } else if ($submit.length)
+        $submit.trigger("focus");
+    }, 0);
   }
 }
 

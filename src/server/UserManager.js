@@ -224,6 +224,12 @@ class UserManager {
     return typeof value === "string" && /^[0-9A-F]+$/.test(value);
   }
 
+  normalizeUsername(username) {
+    return typeof username === "string"
+      ? username.trim().toLowerCase()
+      : "";
+  }
+
   prepareSrpCredentials(salt, verifier) {
     const normalizedSalt = this.normalizeHex(salt);
     const normalizedVerifier = this.normalizeHex(verifier);
@@ -236,15 +242,17 @@ class UserManager {
   }
 
   fakeSrpCredentials(username) {
+    const normalized = this.normalizeUsername(username) || "anonymous";
     const salt = SrpClient.generateSalt();
     const dummyPassword = SrpClient.generateSalt();
     const privateKey = SrpClient.derivePrivateKey(
-      salt, username, dummyPassword);
+      salt, normalized, dummyPassword);
     const verifier = SrpClient.deriveVerifier(privateKey);
     return { salt, verifier };
   }
 
   getSrpChallengeData(user, username) {
+    const normalized = this.normalizeUsername(username);
     if (user && user.srpSalt && user.srpVerifier) {
       return {
         salt: user.srpSalt,
@@ -253,7 +261,7 @@ class UserManager {
         userKey: user.key
       };
     }
-    const fake = this.fakeSrpCredentials(username);
+    const fake = this.fakeSrpCredentials(normalized);
     return {
       salt: fake.salt,
       verifier: fake.verifier,
@@ -930,14 +938,15 @@ class UserManager {
   }
 
   POST_srp_start(req, res) {
-    const username = (req.body && req.body.signin_username
+    const usernameRaw = (req.body && req.body.signin_username
                       ? `${req.body.signin_username}`.trim()
                       : "");
+    const username = this.normalizeUsername(usernameRaw);
     const clientPublic = req.body && req.body.clientPublicEphemeral;
     if (!username || typeof clientPublic !== "string"
         || clientPublic.length === 0)
       return this.sendResult(res, 400, [ "Invalid SRP parameters" ]);
-    return this.getUser({ name: username })
+    return this.getUser({ name: usernameRaw })
     .catch(() => undefined)
     .then(user => {
       const challenge = this.getSrpChallengeData(user, username);
@@ -960,9 +969,10 @@ class UserManager {
   }
 
   POST_srp_finish(req, res) {
-    const username = (req.body && req.body.signin_username
+    const usernameRaw = (req.body && req.body.signin_username
                       ? `${req.body.signin_username}`.trim()
                       : "");
+    const username = this.normalizeUsername(usernameRaw);
     const clientPublic = req.body && req.body.clientPublicEphemeral;
     const clientProof = req.body && req.body.clientSessionProof;
     const state = req.session && req.session.srp;

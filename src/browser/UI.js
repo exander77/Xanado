@@ -76,10 +76,20 @@ class UI {
       log("ALERT", title, message);
     }
 
-    return $("#alertDialog")
+    const $dlg = $("#alertDialog");
+    $dlg.off("keydown.alert")
+    .on("keydown.alert", e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        $dlg.dialog("close");
+      }
+    });
+
+    return $dlg
     .dialog({
       modal: true,
-      title: title || $.i18n("XANADO problem")
+      title: title || $.i18n("XANADO problem"),
+      close: () => $dlg.off("keydown.alert")
     })
     .html(`<p class="alert">${message}</p>`);
   }

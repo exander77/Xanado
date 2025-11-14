@@ -279,6 +279,6 @@
   "word-not-found": "$1 not found in $2",
   "word-rejected": "The {{PLURAL:$1|word|words}} $2 {{PLURAL:$1|was|were}} not found in the dictionary",
   "word-there": "'$1' is already in $2",
-  "wrong-pass": "Wrong password for '$1'",
+  "wrong-pass": "Wrong password. Please try again.",
   "your": "your"
 }

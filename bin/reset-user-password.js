@@ -101,10 +101,11 @@ async function main() {
     throw new Error(`Password database ${dbPath} is not an array`);
 
   const username = `${opts.user}`.trim();
+  const normalized = username.toLowerCase();
   const password = `${opts.password}`;
   const salt = SRPClient.generateSalt();
   const privateKey = SRPClient.derivePrivateKey(
-    salt, username, password);
+    salt, normalized, password);
   const verifier = SRPClient.deriveVerifier(privateKey);
 
   const match = data.find(
