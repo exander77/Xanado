@@ -5,10 +5,9 @@
 /* global Platform */
 
 /* eslint-disable */
-// eslint (or more likely the import plugin) complains:
-// "No default export found in imported module "web-worker""
-// but it works fine.
-import Worker from "web-worker";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const Worker = require("web-worker");
 /* eslint-enable */
 
 import { BackendGame } from "./BackendGame.js";
@@ -72,4 +71,3 @@ function findBestPlay(
 }
 
 export { findBestPlay }
-
