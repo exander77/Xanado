@@ -60,6 +60,7 @@ the following fields:
 + `https` : HTTPS configuration structure. HTTPS is required for notifications to work in the browser and may be important for protecting passwords. See [here](https://linuxize.com/post/creating-a-self-signed-ssl-certificate/) for how to create a self-signed certificate. On Linux: `openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out https.crt -keyout https.key`
 	+ `cert` : cert file e.g. `https.cert`
 	+ `key` : key file e.g. `https.key`
++ `self_signed_cache` : Directory where auto-generated self-signed certificates are cached when running the server with `--self-signed`. Defaults to `.xanado-self-signed` under the current user's home directory (falls back to the OS temp directory). The server reuses the cached key/cert and only regenerates them if they are missing or invalid.
 + `mail` : Email configuration, required for mailing password resets and invitations.
 	+ `host`: mail host
 	+ `sender`:  Mail sender name and address e.g. `"XANADO <xanado@example.com>"`

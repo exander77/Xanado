@@ -21,6 +21,7 @@ import { createRequire } from "module";
 import { Server as SocketServer } from "socket.io";
 import HTTP from "http";
 import HTTPS from "https";
+import tls from "tls";
 import nodemailer from "nodemailer";
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -128,6 +129,38 @@ function generateSelfSigned(commonName) {
   });
 }
 
+function isValidCertificate(key, cert) {
+  try {
+    tls.createSecureContext({ key, cert });
+    return true;
+  } catch (e) {
+    console.warn("Cached self-signed certificate invalid:", e.message);
+    return false;
+  }
+}
+
+function ensureSelfSigned(commonName, cacheDir) {
+  const targetDir = cacheDir
+        || path.join(os.homedir() || os.tmpdir(), ".xanado-self-signed");
+  const keyPath = path.join(targetDir, "key.pem");
+  const certPath = path.join(targetDir, "cert.pem");
+  return Promise.all([
+    Fs.readFile(keyPath).catch(() => null),
+    Fs.readFile(certPath).catch(() => null)
+  ])
+  .then(([key, cert]) => {
+    if (key && cert && isValidCertificate(key, cert))
+      return { key, cert };
+    return generateSelfSigned(commonName)
+    .then(pems => Fs.mkdir(targetDir, { recursive: true })
+          .then(() => Promise.all([
+            Fs.writeFile(keyPath, pems.key),
+            Fs.writeFile(certPath, pems.cert)
+          ]))
+          .then(() => pems));
+  });
+}
+
 const DESCRIPTION = [
   "USAGE",
   `\tnode ${path.relative(".", process.argv[1])} [options]`,
@@ -195,9 +228,14 @@ if (options.config) {
 
 p.then(json => addDefaults(JSON.parse(json)))
 .then(config => {
+  const cacheDir = config.self_signed_cache
+        ? (path.isAbsolute(config.self_signed_cache)
+           ? config.self_signed_cache
+           : path.join(staticRoot, config.self_signed_cache))
+        : path.join(os.homedir() || os.tmpdir(), ".xanado-self-signed");
   if (!options.selfSigned)
     return config;
-  return generateSelfSigned(options.selfSigned || "localhost")
+  return ensureSelfSigned(options.selfSigned || "localhost", cacheDir)
   .then(pems => {
     config.https = {
       key: pems.key,
