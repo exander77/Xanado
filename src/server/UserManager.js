@@ -876,9 +876,19 @@ class UserManager {
       /* c8 ignore next 2 */
       if (this.debug)
         this.debug("UserManager: logging out", departed);
-      return new Promise(resolve => req.logout(resolve))
+      return new Promise((resolve, reject) => req.logout(
+        err => err ? reject(err) : resolve()))
+      .then(() => new Promise((resolve, reject) => {
+        if (!req.session)
+          return resolve();
+        req.session.regenerate(err => err ? reject(err) : resolve());
+      }))
       .then(() => this.sendResult(res, 200, [
-        /*i18n*/"signed-out", departed ]));
+        /*i18n*/"signed-out", departed ]))
+      .catch(e => {
+        console.error("Failed to sign out", e);
+        return this.sendResult(res, 500, [ "Failed to sign out" ]);
+      });
     }
     return this.sendResult(
       res, 401, [ "Not signed in" ]);

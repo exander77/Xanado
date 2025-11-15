@@ -275,15 +275,24 @@ const GamesUIMixin = superclass => class extends superclass {
     })
     .get();
 
+    const toEpoch = value => {
+      if (typeof value === "number" && Number.isFinite(value))
+        return value;
+      if (value instanceof Date)
+        return Number.isFinite(value.getTime()) ? value.getTime() : 0;
+      if (typeof value === "string") {
+        const parsed = Date.parse(value);
+        return Number.isNaN(parsed) ? 0 : parsed;
+      }
+      return 0;
+    };
+
+    const activityFor = game =>
+      toEpoch(game.lastActivity) || toEpoch(game.creationTimestamp);
+
     const games = simples
     .map(simple => BrowserGame.fromJsonable(simple, BrowserGame.CLASSES))
-    .sort((a, b) => {
-      const activityA = Number(a.lastActivity || a.creationTimestamp || 0);
-      const activityB = Number(b.lastActivity || b.creationTimestamp || 0);
-      if (activityA === activityB)
-        return 0;
-      return activityA < activityB ? 1 : -1;
-    });
+    .sort((a, b) => activityFor(b) - activityFor(a));
 
     games.forEach(game => {
       const $row = this.$gameTableRow(game);
